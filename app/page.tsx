@@ -31,7 +31,8 @@ type TabKey =
   | 'routing'
   | 'portal'
   | 'audit'
-  | 'architecture';
+  | 'architecture'
+  | 'client-dashboards';
 
 const tabs: Array<{ key: TabKey; label: string }> = [
   { key: 'overview', label: 'Global Oversight' },
@@ -42,6 +43,7 @@ const tabs: Array<{ key: TabKey; label: string }> = [
   { key: 'portal', label: 'Public Portal' },
   { key: 'audit', label: 'Audit + Billing' },
   { key: 'architecture', label: 'Tech Architecture' },
+  { key: 'client-dashboards', label: 'Client Dashboards' },
 ];
 
 function Kpi({ label, value }: { label: string; value: string | number }) {
@@ -56,6 +58,7 @@ function Kpi({ label, value }: { label: string; value: string | number }) {
 export default function HomePage() {
   const [tab, setTab] = useState<TabKey>('overview');
   const [archView, setArchView] = useState<'control-plane' | 'data-plane' | 'security' | 'deployment' | 'integrations'>('control-plane');
+  const [clientView, setClientView] = useState<'city' | 'school' | 'university' | 'transit' | 'housing' | 'utilities'>('city');
 
   const totals = useMemo(() => {
     const reports = entities.reduce((sum, e) => sum + e.reports24h, 0);
@@ -264,6 +267,70 @@ export default function HomePage() {
               <div className="card"><h3>Open Data Ingestion</h3><p>Adapters for Open311, city GeoJSON, and air quality feed normalization.</p></div>
               <div className="card"><h3>Institution Workflows</h3><p>Routing into departmental queues, escalation paths, and SLA compliance workflows.</p></div>
               <div className="card"><h3>Future Extensions</h3><p>CRM/case-management connectors, regional analytics exports, and public portal syndication.</p></div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {tab === 'client-dashboards' && (
+        <section className="card" style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <h2 style={{ margin: 0, fontSize: 18 }}>Client Dashboard Templates</h2>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn" onClick={() => setClientView('city')} style={{ background: clientView === 'city' ? '#0b5fff' : '#0f172a', borderColor: clientView === 'city' ? '#0b5fff' : '#334155' }}>City</button>
+              <button className="btn" onClick={() => setClientView('school')} style={{ background: clientView === 'school' ? '#0b5fff' : '#0f172a', borderColor: clientView === 'school' ? '#0b5fff' : '#334155' }}>School District</button>
+              <button className="btn" onClick={() => setClientView('university')} style={{ background: clientView === 'university' ? '#0b5fff' : '#0f172a', borderColor: clientView === 'university' ? '#0b5fff' : '#334155' }}>University</button>
+              <button className="btn" onClick={() => setClientView('transit')} style={{ background: clientView === 'transit' ? '#0b5fff' : '#0f172a', borderColor: clientView === 'transit' ? '#0b5fff' : '#334155' }}>Transit</button>
+              <button className="btn" onClick={() => setClientView('housing')} style={{ background: clientView === 'housing' ? '#0b5fff' : '#0f172a', borderColor: clientView === 'housing' ? '#0b5fff' : '#334155' }}>Housing</button>
+              <button className="btn" onClick={() => setClientView('utilities')} style={{ background: clientView === 'utilities' ? '#0b5fff' : '#0f172a', borderColor: clientView === 'utilities' ? '#0b5fff' : '#334155' }}>Utilities</button>
+            </div>
+          </div>
+
+          {clientView === 'city' && (
+            <div className="grid" style={{ marginTop: 14 }}>
+              <div className="card"><h3>City Ops Command</h3><p>Road hazards, sanitation, lighting, permitting, and code enforcement incidents by district.</p></div>
+              <div className="card"><h3>SLA Compliance</h3><p>Department response performance with escalation for overdue critical incidents.</p></div>
+              <div className="card"><h3>Hotspot Map</h3><p>Clustered accountability hotspots with trend deltas week-over-week.</p></div>
+            </div>
+          )}
+
+          {clientView === 'school' && (
+            <div className="grid" style={{ marginTop: 14 }}>
+              <div className="card"><h3>Campus Safety Board</h3><p>Bullying, facility hazards, staff conduct, and emergency routing workflows.</p></div>
+              <div className="card"><h3>Student Welfare Signals</h3><p>Anonymized concern patterns for early intervention and counselor routing.</p></div>
+              <div className="card"><h3>Compliance Audit View</h3><p>Evidence-backed timelines for district governance and legal review.</p></div>
+            </div>
+          )}
+
+          {clientView === 'university' && (
+            <div className="grid" style={{ marginTop: 14 }}>
+              <div className="card"><h3>Research & Campus Integrity</h3><p>Academic misconduct, lab safety, and campus service complaints.</p></div>
+              <div className="card"><h3>Department Scorecards</h3><p>Resolution rates by faculty, operations, and student support units.</p></div>
+              <div className="card"><h3>Policy Governance</h3><p>Voting + transparency records for senate/board-level accountability.</p></div>
+            </div>
+          )}
+
+          {clientView === 'transit' && (
+            <div className="grid" style={{ marginTop: 14 }}>
+              <div className="card"><h3>Transit Incident Feed</h3><p>Delays, station failures, vehicle safety, and passenger complaints in real time.</p></div>
+              <div className="card"><h3>Operations Escalation</h3><p>Route-based dispatch with critical event prioritization and SLA tracking.</p></div>
+              <div className="card"><h3>Reliability Analytics</h3><p>Service disruption trends, failure recurrence, and maintenance impact.</p></div>
+            </div>
+          )}
+
+          {clientView === 'housing' && (
+            <div className="grid" style={{ marginTop: 14 }}>
+              <div className="card"><h3>Tenant Safety Monitor</h3><p>Structural hazards, utility outages, and landlord compliance workflows.</p></div>
+              <div className="card"><h3>Case Prioritization</h3><p>Risk-weighted queue for vulnerable households and urgent remediation.</p></div>
+              <div className="card"><h3>Evidence Ledger</h3><p>Photo/audio/document custody for legal-grade tenant protection cases.</p></div>
+            </div>
+          )}
+
+          {clientView === 'utilities' && (
+            <div className="grid" style={{ marginTop: 14 }}>
+              <div className="card"><h3>Service Reliability Hub</h3><p>Water/power/gas outage incident tracking with region-level impact scoring.</p></div>
+              <div className="card"><h3>Response Operations</h3><p>Crew dispatch routing, restoration ETA compliance, and failure root-cause tags.</p></div>
+              <div className="card"><h3>Regulatory Reporting</h3><p>Auditable service logs and evidence export for regulator and public reporting.</p></div>
             </div>
           )}
         </section>
