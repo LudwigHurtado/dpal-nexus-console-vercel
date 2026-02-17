@@ -250,12 +250,15 @@ export default function NexusMasterDashboard() {
               <p style={{ marginTop: 0, color: '#94a3b8' }}>{selectedEntity.type} · {selectedEntity.region} · <span style={{ color: colorForStatus(selectedEntity.status), fontWeight: 700 }}>{selectedEntity.status}</span></p>
 
               {selectedEntitySection === 'Dashboard' && (
-                <div className="grid" style={{ marginTop: 12 }}>
-                  <Card title="Active Reports" text={`${selectedEntity.active}`} />
-                  <Card title="Reports Today" text={`${selectedEntity.reportsToday}`} />
-                  <Card title="SLA Compliance" text={`${selectedEntity.sla}%`} />
-                  <Card title="Open Alerts" text={`${selectedEntity.alerts}`} />
-                </div>
+                <>
+                  <div className="grid" style={{ marginTop: 12 }}>
+                    <Card title="Active Reports" text={`${selectedEntity.active}`} />
+                    <Card title="Reports Today" text={`${selectedEntity.reportsToday}`} />
+                    <Card title="SLA Compliance" text={`${selectedEntity.sla}%`} />
+                    <Card title="Open Alerts" text={`${selectedEntity.alerts}`} />
+                  </div>
+                  <EntityDashboardTemplate entity={selectedEntity} />
+                </>
               )}
 
               {selectedEntitySection === 'Reports' && <Panel title="Reports Queue" lines={[`High severity queue for ${selectedEntity.name}`, 'Evidence verification workflow enabled', 'Duplicate-detection checks active']} />}
@@ -343,6 +346,56 @@ function Card({ title, text }: { title: string; text: string }) {
 
 function Panel({ title, lines }: { title: string; lines: string[] }) {
   return <div style={{ ...card, marginTop: 12 }}><h3 style={{ marginTop: 0 }}>{title}</h3><ul style={{ margin: 0, paddingLeft: 18, color: '#cbd5e1', lineHeight: 1.8 }}>{lines.map((l) => <li key={l}>{l}</li>)}</ul></div>;
+}
+
+function EntityDashboardTemplate({ entity }: { entity: Entity }) {
+  if (entity.type === 'City') {
+    return <Panel title="City Operations Dashboard" lines={[
+      'District-level service request heatmap and escalation queue',
+      'Public Works, Code Enforcement, and Safety department routing',
+      'Road hazards, sanitation, and lighting response SLA tracking',
+    ]} />;
+  }
+  if (entity.type === 'School District') {
+    return <Panel title="School District Accountability Dashboard" lines={[
+      'Campus safety incidents with counselor and security routing',
+      'Bullying and facility hazard triage with protected evidence trails',
+      'District-wide compliance timeline for board and legal review',
+    ]} />;
+  }
+  if (entity.type === 'University') {
+    return <Panel title="University Governance Dashboard" lines={[
+      'Academic integrity and campus operations report pipeline',
+      'Department-level resolution scoreboard (Facilities, Security, Student Affairs)',
+      'Policy governance and auditable escalation decisions',
+    ]} />;
+  }
+  if (entity.type === 'Transit Agency') {
+    return <Panel title="Transit Reliability Dashboard" lines={[
+      'Station and route incident board with dispatch severity filters',
+      'Delay, outage, and maintenance SLA observability by line',
+      'Recurring fault detection and high-risk corridor monitoring',
+    ]} />;
+  }
+  if (entity.type === 'Housing Authority') {
+    return <Panel title="Housing Authority Protection Dashboard" lines={[
+      'Tenant safety and structural risk case prioritization',
+      'Landlord compliance workflow with legal-grade evidence packets',
+      'Urgent vulnerability queue for critical household conditions',
+    ]} />;
+  }
+  if (entity.type === 'Utilities Provider') {
+    return <Panel title="Utilities Service Assurance Dashboard" lines={[
+      'Power/water/gas outage map with restoration SLA controls',
+      'Crew dispatch and infrastructure incident escalation matrix',
+      'Regulatory-ready audit exports with tamper-evident records',
+    ]} />;
+  }
+  return <Panel title="Custom Entity Dashboard" lines={[
+    'Configurable module layout with tenant-specific routing rules',
+    'Role-based oversight and operational KPI instrumentation',
+    'Evidence vault, SLA tracking, and policy controls enabled',
+  ]} />;
 }
 
 const topBar: React.CSSProperties = {
