@@ -30,7 +30,8 @@ type TabKey =
   | 'roles'
   | 'routing'
   | 'portal'
-  | 'audit';
+  | 'audit'
+  | 'architecture';
 
 const tabs: Array<{ key: TabKey; label: string }> = [
   { key: 'overview', label: 'Global Oversight' },
@@ -40,6 +41,7 @@ const tabs: Array<{ key: TabKey; label: string }> = [
   { key: 'routing', label: 'Routing + SLA' },
   { key: 'portal', label: 'Public Portal' },
   { key: 'audit', label: 'Audit + Billing' },
+  { key: 'architecture', label: 'Tech Architecture' },
 ];
 
 function Kpi({ label, value }: { label: string; value: string | number }) {
@@ -53,6 +55,7 @@ function Kpi({ label, value }: { label: string; value: string | number }) {
 
 export default function HomePage() {
   const [tab, setTab] = useState<TabKey>('overview');
+  const [archView, setArchView] = useState<'control-plane' | 'data-plane' | 'security' | 'deployment' | 'integrations'>('control-plane');
 
   const totals = useMemo(() => {
     const reports = entities.reduce((sum, e) => sum + e.reports24h, 0);
@@ -208,6 +211,61 @@ export default function HomePage() {
               <tr><td>2026-02-17 14:58</td><td>system</td><td>Generated monthly invoice</td><td>Metro Transit A</td></tr>
             </tbody>
           </table>
+        </section>
+      )}
+
+      {tab === 'architecture' && (
+        <section className="card" style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <h2 style={{ margin: 0, fontSize: 18 }}>Platform Architecture Showcase</h2>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn" onClick={() => setArchView('control-plane')} style={{ background: archView === 'control-plane' ? '#0b5fff' : '#0f172a', borderColor: archView === 'control-plane' ? '#0b5fff' : '#334155' }}>Control Plane</button>
+              <button className="btn" onClick={() => setArchView('data-plane')} style={{ background: archView === 'data-plane' ? '#0b5fff' : '#0f172a', borderColor: archView === 'data-plane' ? '#0b5fff' : '#334155' }}>Data Plane</button>
+              <button className="btn" onClick={() => setArchView('security')} style={{ background: archView === 'security' ? '#0b5fff' : '#0f172a', borderColor: archView === 'security' ? '#0b5fff' : '#334155' }}>Security</button>
+              <button className="btn" onClick={() => setArchView('deployment')} style={{ background: archView === 'deployment' ? '#0b5fff' : '#0f172a', borderColor: archView === 'deployment' ? '#0b5fff' : '#334155' }}>Deployment</button>
+              <button className="btn" onClick={() => setArchView('integrations')} style={{ background: archView === 'integrations' ? '#0b5fff' : '#0f172a', borderColor: archView === 'integrations' ? '#0b5fff' : '#334155' }}>Integrations</button>
+            </div>
+          </div>
+
+          {archView === 'control-plane' && (
+            <div className="grid" style={{ marginTop: 14 }}>
+              <div className="card"><h3>Tenant Registry</h3><p>Source-of-truth entity management for City, School, Transit, Utilities, and Housing tenants.</p></div>
+              <div className="card"><h3>Policy Engine</h3><p>Per-tenant modules, category taxonomies, routing, and SLA orchestration via config APIs.</p></div>
+              <div className="card"><h3>Governance Console</h3><p>Role-based access for platform-admin, entity-admin, moderators, and analysts.</p></div>
+            </div>
+          )}
+
+          {archView === 'data-plane' && (
+            <div className="grid" style={{ marginTop: 14 }}>
+              <div className="card"><h3>Report Lifecycle</h3><p>Strict states: draft → submitted → verified → anchored → certified.</p></div>
+              <div className="card"><h3>Evidence Vault V2</h3><p>Chain-of-custody timelines, hashes, signed packet metadata, and verification endpoints.</p></div>
+              <div className="card"><h3>Transparency Metrics</h3><p>Cross-entity reporting, verification, SLA performance, and hotspot analytics.</p></div>
+            </div>
+          )}
+
+          {archView === 'security' && (
+            <div className="grid" style={{ marginTop: 14 }}>
+              <div className="card"><h3>RBAC + Tenant Isolation</h3><p>Authorization boundaries across tenants, departments, and operational roles.</p></div>
+              <div className="card"><h3>Integrity Controls</h3><p>Tamper-evident hashes, anchor references, and immutable audit history.</p></div>
+              <div className="card"><h3>Compliance Guardrails</h3><p>Utility-only disclosures, KYC/AML hook points, and policy-driven visibility controls.</p></div>
+            </div>
+          )}
+
+          {archView === 'deployment' && (
+            <div className="grid" style={{ marginTop: 14 }}>
+              <div className="card"><h3>Nexus Console</h3><p>Vercel-hosted institutional UI for operations, governance, and demos.</p></div>
+              <div className="card"><h3>Nexus API</h3><p>Separate control-plane service with feature flags and tenant configuration endpoints.</p></div>
+              <div className="card"><h3>Public DPAL App</h3><p>Runs as tenant-aware client, loading config from Nexus and enforcing policy at runtime.</p></div>
+            </div>
+          )}
+
+          {archView === 'integrations' && (
+            <div className="grid" style={{ marginTop: 14 }}>
+              <div className="card"><h3>Open Data Ingestion</h3><p>Adapters for Open311, city GeoJSON, and air quality feed normalization.</p></div>
+              <div className="card"><h3>Institution Workflows</h3><p>Routing into departmental queues, escalation paths, and SLA compliance workflows.</p></div>
+              <div className="card"><h3>Future Extensions</h3><p>CRM/case-management connectors, regional analytics exports, and public portal syndication.</p></div>
+            </div>
+          )}
         </section>
       )}
     </main>
