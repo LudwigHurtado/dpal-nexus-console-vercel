@@ -454,53 +454,90 @@ function EntityRiskLiabilityPanel({ entity }: { entity: Entity }) {
 }
 
 function EntityDashboardTemplate({ entity }: { entity: Entity }) {
+  const [layout, setLayout] = useState<'A' | 'B' | 'C'>('A');
+
   if (entity.type === 'City') {
-    return <Panel title="City Operations Dashboard" lines={[
-      'District-level service request heatmap and escalation queue',
-      'Public Works, Code Enforcement, and Safety department routing',
-      'Road hazards, sanitation, and lighting response SLA tracking',
-    ]} />;
+    const content = {
+      A: [
+        'Mayor/City Manager Command Center: KPI strip, city pulse timeline, top priority queue.',
+        'Fast actions: Open Cases, Critical Alerts, Department Performance, Budget Flags.',
+        'Mobile-first tabs, desktop fat layout with map/feed/priority side rail.'
+      ],
+      B: [
+        'Map-First Operations Board: incident heatmap + pin layers by severity/category.',
+        'Center case feed with one-click assign, SLA update, evidence request, dispatch.',
+        'Right pane filter stack: district, date, department, SLA breach risk.'
+      ],
+      C: [
+        'Department Hub Mode: Public Works / Housing / Safety / Transport scoped views.',
+        'Workload balancing by team with compliance checklist and escalation queue.',
+        'Role-specific queues (manager, dispatcher, analyst) under one city tenant.'
+      ],
+    } as const;
+
+    return (
+      <div style={{ ...card, marginTop: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <h3 style={{ margin: 0 }}>City Dashboard Variants</h3>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(['A', 'B', 'C'] as const).map((k) => (
+              <button key={k} style={{ ...btn, background: layout === k ? '#0b5fff' : '#0b1220', borderColor: layout === k ? '#0b5fff' : '#334155' }} onClick={() => setLayout(k)}>
+                Layout {k}
+              </button>
+            ))}
+          </div>
+        </div>
+        <ul style={{ margin: '10px 0 0', paddingLeft: 18, color: '#cbd5e1', lineHeight: 1.8 }}>
+          {content[layout].map((line) => <li key={line}>{line}</li>)}
+        </ul>
+      </div>
+    );
   }
+
   if (entity.type === 'School District') {
-    return <Panel title="School District Accountability Dashboard" lines={[
-      'Campus safety incidents with counselor and security routing',
-      'Bullying and facility hazard triage with protected evidence trails',
-      'District-wide compliance timeline for board and legal review',
-    ]} />;
+    const content = {
+      A: [
+        'District HQ Dashboard: multi-school safety/compliance overview and trend tracking.',
+        'Top modules: Title IX, bullying, teacher conduct, transport, facilities incidents.',
+        'School status pills (green/yellow/red) + cross-campus intervention board.'
+      ],
+      B: [
+        'Principal/Campus Operations Board: map/building zones + live incident feed.',
+        'Action panel for counselor/admin assignment, parent contact, intervention plans.',
+        'Fast case tiles: bullying, safety threat, teacher misconduct, facilities, meals.'
+      ],
+      C: [
+        'Parent/Student Trust Portal: report issue, track status, receive approved updates.',
+        'Simple mobile UX with anonymous option (policy-dependent) and resources links.',
+        'Transparency-first communication while protecting sensitive identities.'
+      ],
+    } as const;
+
+    return (
+      <div style={{ ...card, marginTop: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <h3 style={{ margin: 0 }}>School Dashboard Variants</h3>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(['A', 'B', 'C'] as const).map((k) => (
+              <button key={k} style={{ ...btn, background: layout === k ? '#0b5fff' : '#0b1220', borderColor: layout === k ? '#0b5fff' : '#334155' }} onClick={() => setLayout(k)}>
+                Layout {k}
+              </button>
+            ))}
+          </div>
+        </div>
+        <ul style={{ margin: '10px 0 0', paddingLeft: 18, color: '#cbd5e1', lineHeight: 1.8 }}>
+          {content[layout].map((line) => <li key={line}>{line}</li>)}
+        </ul>
+      </div>
+    );
   }
-  if (entity.type === 'University') {
-    return <Panel title="University Governance Dashboard" lines={[
-      'Academic integrity and campus operations report pipeline',
-      'Department-level resolution scoreboard (Facilities, Security, Student Affairs)',
-      'Policy governance and auditable escalation decisions',
-    ]} />;
-  }
-  if (entity.type === 'Transit Agency') {
-    return <Panel title="Transit Reliability Dashboard" lines={[
-      'Station and route incident board with dispatch severity filters',
-      'Delay, outage, and maintenance SLA observability by line',
-      'Recurring fault detection and high-risk corridor monitoring',
-    ]} />;
-  }
-  if (entity.type === 'Housing Authority') {
-    return <Panel title="Housing Authority Protection Dashboard" lines={[
-      'Tenant safety and structural risk case prioritization',
-      'Landlord compliance workflow with legal-grade evidence packets',
-      'Urgent vulnerability queue for critical household conditions',
-    ]} />;
-  }
-  if (entity.type === 'Utilities Provider') {
-    return <Panel title="Utilities Service Assurance Dashboard" lines={[
-      'Power/water/gas outage map with restoration SLA controls',
-      'Crew dispatch and infrastructure incident escalation matrix',
-      'Regulatory-ready audit exports with tamper-evident records',
-    ]} />;
-  }
-  return <Panel title="Custom Entity Dashboard" lines={[
-    'Configurable module layout with tenant-specific routing rules',
-    'Role-based oversight and operational KPI instrumentation',
-    'Evidence vault, SLA tracking, and policy controls enabled',
-  ]} />;
+
+  if (entity.type === 'University') return <Panel title="University Governance Dashboard" lines={['Academic integrity and campus operations report pipeline','Department-level resolution scoreboard (Facilities, Security, Student Affairs)','Policy governance and auditable escalation decisions']} />;
+  if (entity.type === 'Transit Agency') return <Panel title="Transit Reliability Dashboard" lines={['Station and route incident board with dispatch severity filters','Delay, outage, and maintenance SLA observability by line','Recurring fault detection and high-risk corridor monitoring']} />;
+  if (entity.type === 'Housing Authority') return <Panel title="Housing Authority Protection Dashboard" lines={['Tenant safety and structural risk case prioritization','Landlord compliance workflow with legal-grade evidence packets','Urgent vulnerability queue for critical household conditions']} />;
+  if (entity.type === 'Utilities Provider') return <Panel title="Utilities Service Assurance Dashboard" lines={['Power/water/gas outage map with restoration SLA controls','Crew dispatch and infrastructure incident escalation matrix','Regulatory-ready audit exports with tamper-evident records']} />;
+
+  return <Panel title="Custom Entity Dashboard" lines={['Configurable module layout with tenant-specific routing rules','Role-based oversight and operational KPI instrumentation','Evidence vault, SLA tracking, and policy controls enabled']} />;
 }
 
 const topBar: React.CSSProperties = {
