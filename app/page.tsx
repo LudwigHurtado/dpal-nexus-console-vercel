@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 type EntityStatus = 'Active' | 'Trial' | 'Suspended';
 type EntityType = 'City' | 'School District' | 'University' | 'Transit Agency' | 'Housing Authority' | 'Utilities Provider' | 'Custom';
@@ -50,6 +50,10 @@ export default function NexusMasterDashboard() {
   const [draftType, setDraftType] = useState<EntityType>('City');
   const [draftRegion, setDraftRegion] = useState('US');
 
+  const [dataSource, setDataSource] = useState<'mock' | 'live'>('mock');
+  const [lastSyncAt, setLastSyncAt] = useState<string>('Never');
+  const [syncStatus, setSyncStatus] = useState<string>('Mock data active');
+
   const filteredEntities = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return entities;
@@ -65,6 +69,55 @@ export default function NexusMasterDashboard() {
     const alerts = entities.reduce((sum, e) => sum + e.alerts, 0);
     return { totalActive, reportsToday, avgSla: avgSla.toFixed(1), alerts };
   }, [entities]);
+
+  const syncFromRealSystem = async () => {
+    const base = (process.env.NEXT_PUBLIC_DPAL_API_BASE || '').trim();
+    if (!base) {
+      setSyncStatus('Live sync unavailable: set NEXT_PUBLIC_DPAL_API_BASE in Vercel env vars.');
+      return;
+    }
+
+    try {
+      setSyncStatus('Syncing from real DPAL services...');
+      const [transparencyRes, opsRes] = await Promise.all([
+        fetch(`${base}/api/public/transparency/metrics`),
+        fetch(`${base}/api/ops/confidence`),
+      ]);
+
+      if (!transparencyRes.ok || !opsRes.ok) {
+        throw new Error(`sync_failed_${transparencyRes.status}_${opsRes.status}`);
+      }
+
+      const transparency = await transparencyRes.json();
+      const ops = await opsRes.json();
+
+      const reports24h = Number(transparency?.metrics?.reports24h || transparency?.metrics?.anchors24h || 0);
+      const sla = Number(ops?.summary?.score || 85);
+
+      setEntities((prev) =>
+        prev.map((e) => ({
+          ...e,
+          reportsToday: Math.max(0, Math.round(reports24h / Math.max(1, prev.length))),
+          sla: Math.max(50, Math.min(99, Math.round((e.sla * 0.6 + sla * 0.4)))),
+        }))
+      );
+
+      setLastSyncAt(new Date().toLocaleString());
+      setSyncStatus('Live sync successful. Dashboard updated from real system endpoints.');
+    } catch (error) {
+      console.error(error);
+      setSyncStatus('Live sync failed. Verify API URL, CORS, and endpoint availability.');
+    }
+  };
+
+  useEffect(() => {
+    if (dataSource === 'live') {
+      void syncFromRealSystem();
+    } else {
+      setSyncStatus('Mock data active');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataSource]);
 
   const createEntity = () => {
     if (!draftName.trim()) return;
@@ -186,6 +239,19 @@ export default function NexusMasterDashboard() {
             <>
               <h1 style={{ marginTop: 0, marginBottom: 4 }}>Platform Overview</h1>
               <p style={{ marginTop: 0, color: '#94a3b8' }}>Unified control plane for all institutional tenant dashboards.</p>
+
+              <div style={{ ...card, marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontWeight: 700 }}>Data Source</div>
+                  <div style={{ color: '#94a3b8', fontSize: 13 }}>{syncStatus}</div>
+                  <div style={{ color: '#64748b', fontSize: 12 }}>Last sync: {lastSyncAt}</div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button style={{ ...btn, background: dataSource === 'mock' ? '#0b5fff' : '#0b1220', borderColor: dataSource === 'mock' ? '#0b5fff' : '#334155' }} onClick={() => setDataSource('mock')}>Mock Setup</button>
+                  <button style={{ ...btn, background: dataSource === 'live' ? '#16a34a' : '#0b1220', borderColor: dataSource === 'live' ? '#16a34a' : '#334155' }} onClick={() => setDataSource('live')}>Live System</button>
+                  <button style={btn} onClick={() => void syncFromRealSystem()}>Sync Now</button>
+                </div>
+              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,minmax(150px,1fr))', gap: 12, marginTop: 16 }}>
                 <Kpi label="Total Active Reports" value={String(totals.totalActive)} />
