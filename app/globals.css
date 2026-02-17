@@ -47,6 +47,7 @@ body {
 }
 .badge.active { background: #052e16; color: #86efac; }
 .badge.trial { background: #1e293b; color: #93c5fd; }
+.badge.suspended { background: #3f1d1d; color: #fca5a5; }
 .btn {
   border: 1px solid #334155;
   background: #0f172a;
