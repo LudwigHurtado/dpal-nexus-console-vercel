@@ -1,340 +1,215 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-
-type EntityType = 'City' | 'School District' | 'University' | 'Transit Agency' | 'Housing Authority' | 'Utilities Provider';
-type EntityStatus = 'Active' | 'Trial' | 'Suspended';
+import React, { useState } from 'react';
 
 type Entity = {
   id: string;
+  icon: string;
   name: string;
-  type: EntityType;
-  status: EntityStatus;
-  region: string;
-  createdAt: string;
-  slaOnTime: number;
-  reports24h: number;
+  type: string;
+  active: number;
+  sla: number;
+  alerts: number;
+  status: 'Healthy' | 'Warning' | 'Critical';
 };
 
 const entities: Entity[] = [
-  { id: 'phoenix', name: 'City of Phoenix', type: 'City', status: 'Active', region: 'US-AZ', createdAt: '2026-02-01', slaOnTime: 93.1, reports24h: 402 },
-  { id: 'lausd', name: 'LA Unified', type: 'School District', status: 'Trial', region: 'US-CA', createdAt: '2026-02-10', slaOnTime: 89.2, reports24h: 231 },
-  { id: 'metro-a', name: 'Metro Transit A', type: 'Transit Agency', status: 'Active', region: 'US-NY', createdAt: '2026-02-15', slaOnTime: 90.4, reports24h: 170 },
-  { id: 'hydro-c', name: 'Utilities Provider C', type: 'Utilities Provider', status: 'Active', region: 'US-TX', createdAt: '2026-02-16', slaOnTime: 95.6, reports24h: 98 },
+  { id: 'phoenix', icon: '🏛', name: 'City of Phoenix', type: 'City', active: 124, sla: 87, alerts: 3, status: 'Healthy' },
+  { id: 'lausd', icon: '🏫', name: 'LA Unified School District', type: 'School', active: 38, sla: 92, alerts: 1, status: 'Healthy' },
+  { id: 'university', icon: '🎓', name: 'State University', type: 'University', active: 29, sla: 90, alerts: 2, status: 'Healthy' },
+  { id: 'metro', icon: '🚇', name: 'Metro Transit Authority', type: 'Transit', active: 84, sla: 78, alerts: 5, status: 'Warning' },
+  { id: 'housing', icon: '🏢', name: 'Housing Authority', type: 'Authority', active: 51, sla: 70, alerts: 8, status: 'Critical' },
+  { id: 'utilities', icon: '⚡', name: 'Utilities Provider', type: 'Utilities', active: 44, sla: 81, alerts: 4, status: 'Warning' },
 ];
 
-type TabKey =
-  | 'overview'
-  | 'entities'
-  | 'wizard'
-  | 'roles'
-  | 'routing'
-  | 'portal'
-  | 'audit'
-  | 'architecture'
-  | 'client-dashboards';
+const entityMenu = ['Dashboard', 'Reports', 'Routing', 'SLA', 'Roles', 'Public Portal Settings'];
 
-const tabs: Array<{ key: TabKey; label: string }> = [
-  { key: 'overview', label: 'Global Oversight' },
-  { key: 'entities', label: 'Entity Manager' },
-  { key: 'wizard', label: 'Entity Setup Wizard' },
-  { key: 'roles', label: 'Roles & Access' },
-  { key: 'routing', label: 'Routing + SLA' },
-  { key: 'portal', label: 'Public Portal' },
-  { key: 'audit', label: 'Audit + Billing' },
-  { key: 'architecture', label: 'Tech Architecture' },
-  { key: 'client-dashboards', label: 'Client Dashboards' },
-];
+function statusColor(status: Entity['status']) {
+  if (status === 'Healthy') return '#22c55e';
+  if (status === 'Warning') return '#f59e0b';
+  return '#ef4444';
+}
 
-function Kpi({ label, value }: { label: string; value: string | number }) {
+export default function NexusMasterDashboard() {
+  const [selectedEntity, setSelectedEntity] = useState<string>('phoenix');
+
   return (
-    <div className="card">
-      <div style={{ color: '#94a3b8', marginBottom: 6 }}>{label}</div>
-      <div className="kpi">{value}</div>
+    <main style={{ minHeight: '100vh', background: '#06080f', color: '#e2e8f0', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      {/* Top Bar */}
+      <header style={{ height: 72, borderBottom: '1px solid #1f2937', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', position: 'sticky', top: 0, background: '#06080f', zIndex: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#0b5fff', display: 'grid', placeItems: 'center', fontWeight: 900 }}>N</div>
+          <div style={{ fontWeight: 800, letterSpacing: 0.4 }}>DPAL Nexus</div>
+        </div>
+
+        <input
+          placeholder="Search reports across all tenants..."
+          style={{ width: 460, maxWidth: '45vw', background: '#0b1220', border: '1px solid #263248', color: '#cbd5e1', borderRadius: 12, padding: '10px 12px', outline: 'none' }}
+        />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button style={btn}>Notifications</button>
+          <button style={btn}>Platform Alerts</button>
+          <button style={{ ...btn, background: '#0b5fff', borderColor: '#0b5fff' }}>Platform Admin</button>
+        </div>
+      </header>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', minHeight: 'calc(100vh - 72px)' }}>
+        {/* Sidebar */}
+        <aside style={{ borderRight: '1px solid #1f2937', padding: 16, overflowY: 'auto' }}>
+          <SectionTitle>Platform</SectionTitle>
+          <SidebarItem active>Overview</SidebarItem>
+          <SidebarItem>All Entities</SidebarItem>
+          <SidebarItem>Add Entity</SidebarItem>
+          <SidebarItem>Global Analytics</SidebarItem>
+          <SidebarItem>Audit Logs</SidebarItem>
+          <SidebarItem>Billing</SidebarItem>
+
+          <SectionTitle>Entities</SectionTitle>
+          {entities.map((e) => (
+            <div key={e.id} style={{ marginBottom: 10 }}>
+              <button
+                onClick={() => setSelectedEntity(e.id)}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  background: selectedEntity === e.id ? '#10213f' : '#0b1220',
+                  border: `1px solid ${selectedEntity === e.id ? '#2c62ff' : '#263248'}`,
+                  color: '#e2e8f0',
+                  borderRadius: 10,
+                  padding: '10px 12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                {e.icon} {e.name}
+              </button>
+              <div style={{ marginTop: 6, marginLeft: 10, display: 'grid', gap: 4 }}>
+                {entityMenu.map((item) => (
+                  <div key={item} style={{ fontSize: 12, color: '#94a3b8' }}>• {item}</div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </aside>
+
+        {/* Main Overview */}
+        <section style={{ padding: 20 }}>
+          <h1 style={{ marginTop: 0, marginBottom: 4 }}>Platform Overview</h1>
+          <p style={{ marginTop: 0, color: '#94a3b8' }}>Unified control plane for all institutional dashboards.</p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,minmax(150px,1fr))', gap: 12, marginTop: 16 }}>
+            <Kpi label="Total Active Reports" value="370" />
+            <Kpi label="Reports Today" value="176" />
+            <Kpi label="Avg. Response Time" value="2.9h" />
+            <Kpi label="SLA Compliance" value="83.0%" />
+            <Kpi label="Verification Rate" value="88.4%" />
+          </div>
+
+          <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 14 }}>
+            <div style={card}>
+              <h3 style={{ marginTop: 0 }}>Entity Performance Grid</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ color: '#94a3b8', fontSize: 12 }}>
+                    <th style={th}>Entity</th><th style={th}>Type</th><th style={th}>Active</th><th style={th}>SLA %</th><th style={th}>Alerts</th><th style={th}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entities.map((e) => (
+                    <tr key={e.id} style={{ borderTop: '1px solid #1f2937', cursor: 'pointer' }} onClick={() => setSelectedEntity(e.id)}>
+                      <td style={td}>{e.name}</td>
+                      <td style={td}>{e.type}</td>
+                      <td style={td}>{e.active}</td>
+                      <td style={td}>{e.sla}%</td>
+                      <td style={td}>{e.alerts}</td>
+                      <td style={td}><span style={{ color: statusColor(e.status), fontWeight: 700 }}>{e.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={card}>
+              <h3 style={{ marginTop: 0 }}>Global Trend Panel</h3>
+              <ul style={{ margin: 0, paddingLeft: 18, color: '#cbd5e1', lineHeight: 1.8 }}>
+                <li>Top 5 rising categories (cross-entity)</li>
+                <li>Repeat offender locations</li>
+                <li>Most overdue entities</li>
+                <li>Most efficient entity leaderboard</li>
+                <li>SLA risk warnings</li>
+              </ul>
+            </div>
+          </div>
+
+          <div style={{ ...card, marginTop: 14 }}>
+            <h3 style={{ marginTop: 0 }}>Cross-Entity Incident Heatmap</h3>
+            <p style={{ marginTop: 0, color: '#94a3b8' }}>
+              Filters: Entity Type · Severity · Verification Status
+            </p>
+            <div style={{ height: 260, border: '1px dashed #334155', borderRadius: 14, background: 'linear-gradient(180deg,#0b1220,#090f1a)', display: 'grid', placeItems: 'center', color: '#94a3b8' }}>
+              Heatmap canvas placeholder (regional/national visibility)
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <div style={{ marginTop: 16, marginBottom: 8, color: '#60a5fa', fontSize: 12, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase' }}>{children}</div>;
+}
+
+function SidebarItem({ children, active = false }: { children: React.ReactNode; active?: boolean }) {
+  return (
+    <div style={{
+      padding: '9px 10px',
+      borderRadius: 8,
+      background: active ? '#10213f' : 'transparent',
+      border: active ? '1px solid #2c62ff' : '1px solid transparent',
+      marginBottom: 6,
+      fontWeight: active ? 700 : 500,
+      color: active ? '#dbeafe' : '#cbd5e1'
+    }}>
+      {children}
     </div>
   );
 }
 
-export default function HomePage() {
-  const [tab, setTab] = useState<TabKey>('overview');
-  const [archView, setArchView] = useState<'control-plane' | 'data-plane' | 'security' | 'deployment' | 'integrations'>('control-plane');
-  const [clientView, setClientView] = useState<'city' | 'school' | 'university' | 'transit' | 'housing' | 'utilities'>('city');
-
-  const totals = useMemo(() => {
-    const reports = entities.reduce((sum, e) => sum + e.reports24h, 0);
-    const avgSla = entities.reduce((sum, e) => sum + e.slaOnTime, 0) / entities.length;
-    return { reports, avgSla: avgSla.toFixed(1), count: entities.length };
-  }, []);
-
+function Kpi({ label, value }: { label: string; value: string }) {
   return (
-    <main className="page">
-      <h1 style={{ marginTop: 0 }}>DPAL Nexus Console</h1>
-      <p style={{ color: '#94a3b8', marginTop: -6 }}>
-        Institutional demo environment for multi-tenant DPAL models.
-      </p>
-
-      <section className="card" style={{ paddingBottom: 10 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              className="btn"
-              onClick={() => setTab(t.key)}
-              style={{
-                background: tab === t.key ? '#0b5fff' : '#0f172a',
-                borderColor: tab === t.key ? '#0b5fff' : '#334155',
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {tab === 'overview' && (
-        <>
-          <section className="grid" style={{ marginTop: 16 }}>
-            <Kpi label="Total Entities" value={totals.count} />
-            <Kpi label="Reports (24h)" value={totals.reports} />
-            <Kpi label="Verification Rate" value="88.4%" />
-            <Kpi label="SLA On-Time (avg)" value={`${totals.avgSla}%`} />
-          </section>
-
-          <section className="card" style={{ marginTop: 16 }}>
-            <h2 style={{ marginTop: 0, fontSize: 18 }}>Top Hotspots</h2>
-            <ul style={{ margin: 0, paddingLeft: 18, color: '#cbd5e1' }}>
-              <li>Phoenix — Illegal dumping cluster (North District)</li>
-              <li>LA Unified — Campus safety incidents (South Zone)</li>
-              <li>Metro A — Station maintenance failures (Line 4)</li>
-            </ul>
-          </section>
-        </>
-      )}
-
-      {tab === 'entities' && (
-        <section className="card" style={{ marginTop: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <h2 style={{ margin: 0, fontSize: 18 }}>Entity Manager</h2>
-            <button className="btn primary">Add Entity</button>
-          </div>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Entity</th><th>Type</th><th>Status</th><th>Region</th><th>Created</th><th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entities.map((e) => (
-                <tr key={e.id}>
-                  <td>{e.name}</td>
-                  <td>{e.type}</td>
-                  <td>
-                    <span className={`badge ${e.status === 'Active' ? 'active' : e.status === 'Trial' ? 'trial' : 'suspended'}`}>{e.status}</span>
-                  </td>
-                  <td>{e.region}</td>
-                  <td>{e.createdAt}</td>
-                  <td style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn">Open Dashboard</button>
-                    <button className="btn">Settings</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )}
-
-      {tab === 'wizard' && (
-        <section className="card" style={{ marginTop: 16 }}>
-          <h2 style={{ marginTop: 0, fontSize: 18 }}>Entity Setup Wizard</h2>
-          <ol style={{ color: '#cbd5e1', paddingLeft: 20, lineHeight: 1.9 }}>
-            <li>Basic Info: Name, Type, Jurisdiction, Region</li>
-            <li>Boundary: Map polygon (optional)</li>
-            <li>Modules: Map, Alerts, Evidence Vault, Public Portal</li>
-            <li>Taxonomy: Categories + Subcategories</li>
-            <li>Routing Rules + SLA Targets</li>
-            <li>Roles + User Invites</li>
-          </ol>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn">Back</button>
-            <button className="btn primary">Continue</button>
-          </div>
-        </section>
-      )}
-
-      {tab === 'roles' && (
-        <section className="card" style={{ marginTop: 16 }}>
-          <h2 style={{ marginTop: 0, fontSize: 18 }}>Roles & Access</h2>
-          <table className="table">
-            <thead><tr><th>Role</th><th>Permissions</th><th>Scope</th></tr></thead>
-            <tbody>
-              <tr><td>Platform Admin</td><td>All entities, billing, audit, config</td><td>Global</td></tr>
-              <tr><td>Entity Admin</td><td>Entity config, users, routing, SLA</td><td>Tenant</td></tr>
-              <tr><td>Moderator</td><td>Review, verify, escalate reports</td><td>Department</td></tr>
-              <tr><td>Analyst</td><td>Read metrics, export reports</td><td>Tenant</td></tr>
-            </tbody>
-          </table>
-        </section>
-      )}
-
-      {tab === 'routing' && (
-        <section className="card" style={{ marginTop: 16 }}>
-          <h2 style={{ marginTop: 0, fontSize: 18 }}>Routing + SLA</h2>
-          <table className="table">
-            <thead><tr><th>Category</th><th>Department</th><th>Priority</th><th>SLA</th></tr></thead>
-            <tbody>
-              <tr><td>Road Hazard</td><td>Public Works</td><td>High</td><td>4h acknowledge / 48h resolve</td></tr>
-              <tr><td>School Safety</td><td>Campus Security</td><td>Critical</td><td>30m acknowledge / 12h resolve</td></tr>
-              <tr><td>Transit Delay</td><td>Operations Control</td><td>Medium</td><td>2h acknowledge / 24h resolve</td></tr>
-            </tbody>
-          </table>
-        </section>
-      )}
-
-      {tab === 'portal' && (
-        <section className="card" style={{ marginTop: 16 }}>
-          <h2 style={{ marginTop: 0, fontSize: 18 }}>Public Portal Settings</h2>
-          <ul style={{ margin: 0, paddingLeft: 18, color: '#cbd5e1', lineHeight: 1.9 }}>
-            <li>Visibility Mode: Verified-only / Internal-only</li>
-            <li>Evidence redaction rules enabled</li>
-            <li>Utility-only legal disclosure enforced</li>
-            <li>Public dashboard branding per tenant</li>
-          </ul>
-        </section>
-      )}
-
-      {tab === 'audit' && (
-        <section className="card" style={{ marginTop: 16 }}>
-          <h2 style={{ marginTop: 0, fontSize: 18 }}>Audit Log + Billing</h2>
-          <table className="table">
-            <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Scope</th></tr></thead>
-            <tbody>
-              <tr><td>2026-02-17 15:30</td><td>platform-admin</td><td>Updated SLA policy</td><td>City of Phoenix</td></tr>
-              <tr><td>2026-02-17 15:10</td><td>entity-admin</td><td>Invited moderator</td><td>LA Unified</td></tr>
-              <tr><td>2026-02-17 14:58</td><td>system</td><td>Generated monthly invoice</td><td>Metro Transit A</td></tr>
-            </tbody>
-          </table>
-        </section>
-      )}
-
-      {tab === 'architecture' && (
-        <section className="card" style={{ marginTop: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <h2 style={{ margin: 0, fontSize: 18 }}>Platform Architecture Showcase</h2>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button className="btn" onClick={() => setArchView('control-plane')} style={{ background: archView === 'control-plane' ? '#0b5fff' : '#0f172a', borderColor: archView === 'control-plane' ? '#0b5fff' : '#334155' }}>Control Plane</button>
-              <button className="btn" onClick={() => setArchView('data-plane')} style={{ background: archView === 'data-plane' ? '#0b5fff' : '#0f172a', borderColor: archView === 'data-plane' ? '#0b5fff' : '#334155' }}>Data Plane</button>
-              <button className="btn" onClick={() => setArchView('security')} style={{ background: archView === 'security' ? '#0b5fff' : '#0f172a', borderColor: archView === 'security' ? '#0b5fff' : '#334155' }}>Security</button>
-              <button className="btn" onClick={() => setArchView('deployment')} style={{ background: archView === 'deployment' ? '#0b5fff' : '#0f172a', borderColor: archView === 'deployment' ? '#0b5fff' : '#334155' }}>Deployment</button>
-              <button className="btn" onClick={() => setArchView('integrations')} style={{ background: archView === 'integrations' ? '#0b5fff' : '#0f172a', borderColor: archView === 'integrations' ? '#0b5fff' : '#334155' }}>Integrations</button>
-            </div>
-          </div>
-
-          {archView === 'control-plane' && (
-            <div className="grid" style={{ marginTop: 14 }}>
-              <div className="card"><h3>Tenant Registry</h3><p>Source-of-truth entity management for City, School, Transit, Utilities, and Housing tenants.</p></div>
-              <div className="card"><h3>Policy Engine</h3><p>Per-tenant modules, category taxonomies, routing, and SLA orchestration via config APIs.</p></div>
-              <div className="card"><h3>Governance Console</h3><p>Role-based access for platform-admin, entity-admin, moderators, and analysts.</p></div>
-            </div>
-          )}
-
-          {archView === 'data-plane' && (
-            <div className="grid" style={{ marginTop: 14 }}>
-              <div className="card"><h3>Report Lifecycle</h3><p>Strict states: draft → submitted → verified → anchored → certified.</p></div>
-              <div className="card"><h3>Evidence Vault V2</h3><p>Chain-of-custody timelines, hashes, signed packet metadata, and verification endpoints.</p></div>
-              <div className="card"><h3>Transparency Metrics</h3><p>Cross-entity reporting, verification, SLA performance, and hotspot analytics.</p></div>
-            </div>
-          )}
-
-          {archView === 'security' && (
-            <div className="grid" style={{ marginTop: 14 }}>
-              <div className="card"><h3>RBAC + Tenant Isolation</h3><p>Authorization boundaries across tenants, departments, and operational roles.</p></div>
-              <div className="card"><h3>Integrity Controls</h3><p>Tamper-evident hashes, anchor references, and immutable audit history.</p></div>
-              <div className="card"><h3>Compliance Guardrails</h3><p>Utility-only disclosures, KYC/AML hook points, and policy-driven visibility controls.</p></div>
-            </div>
-          )}
-
-          {archView === 'deployment' && (
-            <div className="grid" style={{ marginTop: 14 }}>
-              <div className="card"><h3>Nexus Console</h3><p>Vercel-hosted institutional UI for operations, governance, and demos.</p></div>
-              <div className="card"><h3>Nexus API</h3><p>Separate control-plane service with feature flags and tenant configuration endpoints.</p></div>
-              <div className="card"><h3>Public DPAL App</h3><p>Runs as tenant-aware client, loading config from Nexus and enforcing policy at runtime.</p></div>
-            </div>
-          )}
-
-          {archView === 'integrations' && (
-            <div className="grid" style={{ marginTop: 14 }}>
-              <div className="card"><h3>Open Data Ingestion</h3><p>Adapters for Open311, city GeoJSON, and air quality feed normalization.</p></div>
-              <div className="card"><h3>Institution Workflows</h3><p>Routing into departmental queues, escalation paths, and SLA compliance workflows.</p></div>
-              <div className="card"><h3>Future Extensions</h3><p>CRM/case-management connectors, regional analytics exports, and public portal syndication.</p></div>
-            </div>
-          )}
-        </section>
-      )}
-
-      {tab === 'client-dashboards' && (
-        <section className="card" style={{ marginTop: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <h2 style={{ margin: 0, fontSize: 18 }}>Client Dashboard Templates</h2>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button className="btn" onClick={() => setClientView('city')} style={{ background: clientView === 'city' ? '#0b5fff' : '#0f172a', borderColor: clientView === 'city' ? '#0b5fff' : '#334155' }}>City</button>
-              <button className="btn" onClick={() => setClientView('school')} style={{ background: clientView === 'school' ? '#0b5fff' : '#0f172a', borderColor: clientView === 'school' ? '#0b5fff' : '#334155' }}>School District</button>
-              <button className="btn" onClick={() => setClientView('university')} style={{ background: clientView === 'university' ? '#0b5fff' : '#0f172a', borderColor: clientView === 'university' ? '#0b5fff' : '#334155' }}>University</button>
-              <button className="btn" onClick={() => setClientView('transit')} style={{ background: clientView === 'transit' ? '#0b5fff' : '#0f172a', borderColor: clientView === 'transit' ? '#0b5fff' : '#334155' }}>Transit</button>
-              <button className="btn" onClick={() => setClientView('housing')} style={{ background: clientView === 'housing' ? '#0b5fff' : '#0f172a', borderColor: clientView === 'housing' ? '#0b5fff' : '#334155' }}>Housing</button>
-              <button className="btn" onClick={() => setClientView('utilities')} style={{ background: clientView === 'utilities' ? '#0b5fff' : '#0f172a', borderColor: clientView === 'utilities' ? '#0b5fff' : '#334155' }}>Utilities</button>
-            </div>
-          </div>
-
-          {clientView === 'city' && (
-            <div className="grid" style={{ marginTop: 14 }}>
-              <div className="card"><h3>City Ops Command</h3><p>Road hazards, sanitation, lighting, permitting, and code enforcement incidents by district.</p></div>
-              <div className="card"><h3>SLA Compliance</h3><p>Department response performance with escalation for overdue critical incidents.</p></div>
-              <div className="card"><h3>Hotspot Map</h3><p>Clustered accountability hotspots with trend deltas week-over-week.</p></div>
-            </div>
-          )}
-
-          {clientView === 'school' && (
-            <div className="grid" style={{ marginTop: 14 }}>
-              <div className="card"><h3>Campus Safety Board</h3><p>Bullying, facility hazards, staff conduct, and emergency routing workflows.</p></div>
-              <div className="card"><h3>Student Welfare Signals</h3><p>Anonymized concern patterns for early intervention and counselor routing.</p></div>
-              <div className="card"><h3>Compliance Audit View</h3><p>Evidence-backed timelines for district governance and legal review.</p></div>
-            </div>
-          )}
-
-          {clientView === 'university' && (
-            <div className="grid" style={{ marginTop: 14 }}>
-              <div className="card"><h3>Research & Campus Integrity</h3><p>Academic misconduct, lab safety, and campus service complaints.</p></div>
-              <div className="card"><h3>Department Scorecards</h3><p>Resolution rates by faculty, operations, and student support units.</p></div>
-              <div className="card"><h3>Policy Governance</h3><p>Voting + transparency records for senate/board-level accountability.</p></div>
-            </div>
-          )}
-
-          {clientView === 'transit' && (
-            <div className="grid" style={{ marginTop: 14 }}>
-              <div className="card"><h3>Transit Incident Feed</h3><p>Delays, station failures, vehicle safety, and passenger complaints in real time.</p></div>
-              <div className="card"><h3>Operations Escalation</h3><p>Route-based dispatch with critical event prioritization and SLA tracking.</p></div>
-              <div className="card"><h3>Reliability Analytics</h3><p>Service disruption trends, failure recurrence, and maintenance impact.</p></div>
-            </div>
-          )}
-
-          {clientView === 'housing' && (
-            <div className="grid" style={{ marginTop: 14 }}>
-              <div className="card"><h3>Tenant Safety Monitor</h3><p>Structural hazards, utility outages, and landlord compliance workflows.</p></div>
-              <div className="card"><h3>Case Prioritization</h3><p>Risk-weighted queue for vulnerable households and urgent remediation.</p></div>
-              <div className="card"><h3>Evidence Ledger</h3><p>Photo/audio/document custody for legal-grade tenant protection cases.</p></div>
-            </div>
-          )}
-
-          {clientView === 'utilities' && (
-            <div className="grid" style={{ marginTop: 14 }}>
-              <div className="card"><h3>Service Reliability Hub</h3><p>Water/power/gas outage incident tracking with region-level impact scoring.</p></div>
-              <div className="card"><h3>Response Operations</h3><p>Crew dispatch routing, restoration ETA compliance, and failure root-cause tags.</p></div>
-              <div className="card"><h3>Regulatory Reporting</h3><p>Auditable service logs and evidence export for regulator and public reporting.</p></div>
-            </div>
-          )}
-        </section>
-      )}
-    </main>
+    <div style={card}>
+      <div style={{ color: '#94a3b8', fontSize: 12 }}>{label}</div>
+      <div style={{ fontSize: 28, fontWeight: 800, marginTop: 4 }}>{value}</div>
+    </div>
   );
 }
+
+const btn: React.CSSProperties = {
+  background: '#0b1220',
+  border: '1px solid #334155',
+  color: '#e2e8f0',
+  padding: '8px 10px',
+  borderRadius: 10,
+  fontWeight: 700,
+};
+
+const card: React.CSSProperties = {
+  border: '1px solid #1f2937',
+  background: '#0b1220',
+  borderRadius: 14,
+  padding: 12,
+};
+
+const th: React.CSSProperties = {
+  textAlign: 'left',
+  padding: '8px 6px',
+  fontWeight: 700,
+};
+
+const td: React.CSSProperties = {
+  textAlign: 'left',
+  padding: '8px 6px',
+  fontSize: 14,
+};
