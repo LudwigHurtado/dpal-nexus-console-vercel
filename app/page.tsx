@@ -258,6 +258,7 @@ export default function NexusMasterDashboard() {
                     <Card title="Open Alerts" text={`${selectedEntity.alerts}`} />
                   </div>
                   <EntityDashboardTemplate entity={selectedEntity} />
+                  <EntityRiskLiabilityPanel entity={selectedEntity} />
                 </>
               )}
 
@@ -346,6 +347,44 @@ function Card({ title, text }: { title: string; text: string }) {
 
 function Panel({ title, lines }: { title: string; lines: string[] }) {
   return <div style={{ ...card, marginTop: 12 }}><h3 style={{ marginTop: 0 }}>{title}</h3><ul style={{ margin: 0, paddingLeft: 18, color: '#cbd5e1', lineHeight: 1.8 }}>{lines.map((l) => <li key={l}>{l}</li>)}</ul></div>;
+}
+
+function EntityRiskLiabilityPanel({ entity }: { entity: Entity }) {
+  const riskScore = Math.max(0, Math.min(100, Math.round((100 - entity.sla) * 0.9 + entity.alerts * 2 + entity.active * 0.08)));
+  const liabilityLevel = riskScore >= 70 ? 'High' : riskScore >= 45 ? 'Moderate' : 'Low';
+  const riskColor = liabilityLevel === 'High' ? '#ef4444' : liabilityLevel === 'Moderate' ? '#f59e0b' : '#22c55e';
+
+  return (
+    <div style={{ ...card, marginTop: 12 }}>
+      <h3 style={{ marginTop: 0 }}>Risk, Liability & Issues Cockpit</h3>
+      <div className="grid" style={{ marginTop: 8 }}>
+        <Card title="Risk Score" text={`${riskScore}/100`} />
+        <Card title="Liability Exposure" text={liabilityLevel} />
+        <Card title="Open Critical Alerts" text={`${entity.alerts}`} />
+        <Card title="SLA Risk Gap" text={`${Math.max(0, 90 - entity.sla).toFixed(1)}%`} />
+      </div>
+
+      <div style={{ marginTop: 12, border: '1px solid #1f2937', borderRadius: 12, padding: 10, background: '#0a101b' }}>
+        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>Current Liability Signal</div>
+        <div style={{ fontWeight: 800, color: riskColor }}>{liabilityLevel} exposure driven by SLA pressure + unresolved alerts.</div>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <h4 style={{ margin: '0 0 8px 0' }}>Priority Issues</h4>
+        <ul style={{ margin: 0, paddingLeft: 18, color: '#cbd5e1', lineHeight: 1.8 }}>
+          <li>Overdue high-severity reports requiring immediate assignment</li>
+          <li>Recurring hotspot zones with repeated incidents</li>
+          <li>Verification backlog increasing legal response risk</li>
+        </ul>
+      </div>
+
+      <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button style={{ ...btn, background: '#7f1d1d', borderColor: '#b91c1c' }}>Open Critical Queue</button>
+        <button style={{ ...btn, background: '#78350f', borderColor: '#f59e0b' }}>Review Liability Cases</button>
+        <button style={{ ...btn, background: '#0f172a', borderColor: '#334155' }}>Export Risk Report</button>
+      </div>
+    </div>
+  );
 }
 
 function EntityDashboardTemplate({ entity }: { entity: Entity }) {
