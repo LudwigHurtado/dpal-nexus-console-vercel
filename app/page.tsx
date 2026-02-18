@@ -453,6 +453,27 @@ function EntityRiskLiabilityPanel({ entity }: { entity: Entity }) {
   );
 }
 
+function EntityShowcaseHero({ entity }: { entity: Entity }) {
+  const heroByType: Record<EntityType, { title: string; subtitle: string; accent: string }> = {
+    City: { title: 'City Risk Command', subtitle: 'Unified district risk radar + critical intervention queue', accent: '#0ea5e9' },
+    'School District': { title: 'District Safety Beacon', subtitle: 'Cross-campus welfare, compliance, and intervention intelligence', accent: '#8b5cf6' },
+    University: { title: 'University Integrity Core', subtitle: 'Academic governance and incident integrity oversight', accent: '#14b8a6' },
+    'Transit Agency': { title: 'Transit Reliability Core', subtitle: 'Route-level disruption intelligence and dispatch readiness', accent: '#f59e0b' },
+    'Housing Authority': { title: 'Housing Protection Grid', subtitle: 'Tenant risk triage with legal-grade accountability evidence', accent: '#ef4444' },
+    'Utilities Provider': { title: 'Utilities Continuity Matrix', subtitle: 'Outage impact visibility with restoration SLA control', accent: '#22c55e' },
+    Custom: { title: 'Custom Entity Control Core', subtitle: 'Configurable governance, risk, and operational command surface', accent: '#60a5fa' },
+  };
+
+  const hero = heroByType[entity.type];
+  return (
+    <div style={{ ...card, marginTop: 12, borderColor: hero.accent, background: 'linear-gradient(135deg,#0b1220,#0a101b)' }}>
+      <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8, color: hero.accent, fontWeight: 800 }}>Signature Showcase Element</div>
+      <div style={{ fontSize: 24, fontWeight: 900, marginTop: 6 }}>{hero.title}</div>
+      <div style={{ color: '#cbd5e1', marginTop: 4 }}>{hero.subtitle}</div>
+    </div>
+  );
+}
+
 function EntityDashboardTemplate({ entity }: { entity: Entity }) {
   const [layout, setLayout] = useState<'A' | 'B' | 'C'>('A');
 
@@ -476,21 +497,24 @@ function EntityDashboardTemplate({ entity }: { entity: Entity }) {
     } as const;
 
     return (
-      <div style={{ ...card, marginTop: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <h3 style={{ margin: 0 }}>City Dashboard Variants</h3>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {(['A', 'B', 'C'] as const).map((k) => (
-              <button key={k} style={{ ...btn, background: layout === k ? '#0b5fff' : '#0b1220', borderColor: layout === k ? '#0b5fff' : '#334155' }} onClick={() => setLayout(k)}>
-                Layout {k}
-              </button>
-            ))}
+      <>
+        <EntityShowcaseHero entity={entity} />
+        <div style={{ ...card, marginTop: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <h3 style={{ margin: 0 }}>City Dashboard Variants</h3>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {(['A', 'B', 'C'] as const).map((k) => (
+                <button key={k} style={{ ...btn, background: layout === k ? '#0b5fff' : '#0b1220', borderColor: layout === k ? '#0b5fff' : '#334155' }} onClick={() => setLayout(k)}>
+                  Layout {k}
+                </button>
+              ))}
+            </div>
           </div>
+          <ul style={{ margin: '10px 0 0', paddingLeft: 18, color: '#cbd5e1', lineHeight: 1.8 }}>
+            {content[layout].map((line) => <li key={line}>{line}</li>)}
+          </ul>
         </div>
-        <ul style={{ margin: '10px 0 0', paddingLeft: 18, color: '#cbd5e1', lineHeight: 1.8 }}>
-          {content[layout].map((line) => <li key={line}>{line}</li>)}
-        </ul>
-      </div>
+      </>
     );
   }
 
@@ -514,30 +538,33 @@ function EntityDashboardTemplate({ entity }: { entity: Entity }) {
     } as const;
 
     return (
-      <div style={{ ...card, marginTop: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <h3 style={{ margin: 0 }}>School Dashboard Variants</h3>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {(['A', 'B', 'C'] as const).map((k) => (
-              <button key={k} style={{ ...btn, background: layout === k ? '#0b5fff' : '#0b1220', borderColor: layout === k ? '#0b5fff' : '#334155' }} onClick={() => setLayout(k)}>
-                Layout {k}
-              </button>
-            ))}
+      <>
+        <EntityShowcaseHero entity={entity} />
+        <div style={{ ...card, marginTop: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <h3 style={{ margin: 0 }}>School Dashboard Variants</h3>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {(['A', 'B', 'C'] as const).map((k) => (
+                <button key={k} style={{ ...btn, background: layout === k ? '#0b5fff' : '#0b1220', borderColor: layout === k ? '#0b5fff' : '#334155' }} onClick={() => setLayout(k)}>
+                  Layout {k}
+                </button>
+              ))}
+            </div>
           </div>
+          <ul style={{ margin: '10px 0 0', paddingLeft: 18, color: '#cbd5e1', lineHeight: 1.8 }}>
+            {content[layout].map((line) => <li key={line}>{line}</li>)}
+          </ul>
         </div>
-        <ul style={{ margin: '10px 0 0', paddingLeft: 18, color: '#cbd5e1', lineHeight: 1.8 }}>
-          {content[layout].map((line) => <li key={line}>{line}</li>)}
-        </ul>
-      </div>
+      </>
     );
   }
 
-  if (entity.type === 'University') return <Panel title="University Governance Dashboard" lines={['Academic integrity and campus operations report pipeline','Department-level resolution scoreboard (Facilities, Security, Student Affairs)','Policy governance and auditable escalation decisions']} />;
-  if (entity.type === 'Transit Agency') return <Panel title="Transit Reliability Dashboard" lines={['Station and route incident board with dispatch severity filters','Delay, outage, and maintenance SLA observability by line','Recurring fault detection and high-risk corridor monitoring']} />;
-  if (entity.type === 'Housing Authority') return <Panel title="Housing Authority Protection Dashboard" lines={['Tenant safety and structural risk case prioritization','Landlord compliance workflow with legal-grade evidence packets','Urgent vulnerability queue for critical household conditions']} />;
-  if (entity.type === 'Utilities Provider') return <Panel title="Utilities Service Assurance Dashboard" lines={['Power/water/gas outage map with restoration SLA controls','Crew dispatch and infrastructure incident escalation matrix','Regulatory-ready audit exports with tamper-evident records']} />;
+  if (entity.type === 'University') return <><EntityShowcaseHero entity={entity} /><Panel title="University Governance Dashboard" lines={['Academic integrity and campus operations report pipeline','Department-level resolution scoreboard (Facilities, Security, Student Affairs)','Policy governance and auditable escalation decisions']} /></>;
+  if (entity.type === 'Transit Agency') return <><EntityShowcaseHero entity={entity} /><Panel title="Transit Reliability Dashboard" lines={['Station and route incident board with dispatch severity filters','Delay, outage, and maintenance SLA observability by line','Recurring fault detection and high-risk corridor monitoring']} /></>;
+  if (entity.type === 'Housing Authority') return <><EntityShowcaseHero entity={entity} /><Panel title="Housing Authority Protection Dashboard" lines={['Tenant safety and structural risk case prioritization','Landlord compliance workflow with legal-grade evidence packets','Urgent vulnerability queue for critical household conditions']} /></>;
+  if (entity.type === 'Utilities Provider') return <><EntityShowcaseHero entity={entity} /><Panel title="Utilities Service Assurance Dashboard" lines={['Power/water/gas outage map with restoration SLA controls','Crew dispatch and infrastructure incident escalation matrix','Regulatory-ready audit exports with tamper-evident records']} /></>;
 
-  return <Panel title="Custom Entity Dashboard" lines={['Configurable module layout with tenant-specific routing rules','Role-based oversight and operational KPI instrumentation','Evidence vault, SLA tracking, and policy controls enabled']} />;
+  return <><EntityShowcaseHero entity={entity} /><Panel title="Custom Entity Dashboard" lines={['Configurable module layout with tenant-specific routing rules','Role-based oversight and operational KPI instrumentation','Evidence vault, SLA tracking, and policy controls enabled']} /></>;
 }
 
 const topBar: React.CSSProperties = {
