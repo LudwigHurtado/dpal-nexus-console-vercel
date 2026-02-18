@@ -4,12 +4,21 @@ import React, { useMemo, useState } from 'react';
 
 type EntityType =
   | 'City'
+  | 'County Government'
   | 'Hospital Network'
   | 'School District'
   | 'University'
   | 'Transit Agency'
+  | 'Police Department'
+  | 'Fire Department'
   | 'Housing Authority'
-  | 'Utilities Provider';
+  | 'Utilities Provider'
+  | 'Retail Chain'
+  | 'Logistics Company'
+  | 'Banking Group'
+  | 'Insurance Provider'
+  | 'Telecom Provider'
+  | 'Airport Authority';
 
 type DashboardView = 'Executive' | 'Operations' | 'Risk & Liability' | 'Public Portal';
 type Status = 'Active' | 'Pilot' | 'Planning';
@@ -129,26 +138,200 @@ const ENTITIES: Entity[] = [
       { id: 'EDU-2302', channel: 'Web Portal', title: 'Facilities hazard in science lab', severity: 'High', status: 'Action Taken', location: 'Campus Este', eta: 'Completed', summary: 'Area contained, maintenance team resolved issue, documentation submitted.' },
     ],
   },
+  {
+    id: 'nyc-city',
+    name: 'City of New York',
+    type: 'City',
+    region: 'US-NY',
+    status: 'Active',
+    confidence: 95,
+    heroImage: 'https://images.unsplash.com/photo-1546436836-07a91091f160?auto=format&fit=crop&w=1400&q=80',
+    kpis: [
+      { label: 'Open Cases', value: '3,842', delta: '-6.1%' },
+      { label: 'Resolved (7d)', value: '9,410', delta: '+10.2%' },
+      { label: 'Avg Response', value: '1.8h', delta: '-0.3h' },
+      { label: 'SLA', value: '94%', delta: '+1.7%' },
+    ],
+    valueStats: [
+      { label: 'Critical Delays Avoided', value: '412/mo' },
+      { label: 'Citizen NPS Lift', value: '+21%' },
+      { label: 'Ops Cost Saved', value: '$410k/mo' },
+    ],
+    modules: ['Borough Heatmap', 'Emergency Routing', 'Public Portal Transparency', 'Escalation Watchtower'],
+    reports: [
+      { id: 'NYC-1001', channel: 'App', title: 'Road collapse hazard', severity: 'High', status: 'New', location: 'Brooklyn', eta: '1h', summary: 'Sinkhole expansion near school bus route requiring immediate closure and reroute.' },
+      { id: 'NYC-1004', channel: 'WhatsApp', title: 'Recurring power issue at intersection', severity: 'Moderate', status: 'Investigating', location: 'Queens', eta: '4h', summary: 'Signal downtime recurring in peak traffic window with safety impact.' },
+      { id: 'NYC-1012', channel: 'Web Portal', title: 'Illegal dumping near park', severity: 'Moderate', status: 'Action Taken', location: 'Bronx', eta: 'Completed', summary: 'Cleanup and enforcement patrol assigned; follow-up verification pending.' },
+    ],
+  },
+  {
+    id: 'la-city',
+    name: 'City of Los Angeles',
+    type: 'City',
+    region: 'US-CA',
+    status: 'Pilot',
+    confidence: 90,
+    heroImage: 'https://images.unsplash.com/photo-1468436385273-8abca6dfd8d3?auto=format&fit=crop&w=1400&q=80',
+    kpis: [
+      { label: 'Open Cases', value: '2,940', delta: '-3.2%' },
+      { label: 'Resolved (7d)', value: '7,118', delta: '+11.0%' },
+      { label: 'Avg Response', value: '2.1h', delta: '-0.2h' },
+      { label: 'SLA', value: '92%', delta: '+1.2%' },
+    ],
+    valueStats: [
+      { label: 'Escalations Prevented', value: '287/mo' },
+      { label: 'Field Crew Utilization', value: '+19%' },
+      { label: 'Public Trust Score', value: '+14%' },
+    ],
+    modules: ['District Risk Radar', 'Traffic-Safety Cases', 'Infrastructure Dispatch', 'Policy Audit Feed'],
+    reports: [
+      { id: 'LAX-2101', channel: 'Hotline', title: 'Damaged traffic control cabinet', severity: 'High', status: 'Investigating', location: 'Downtown LA', eta: '2h', summary: 'Signal coordination interrupted across two corridors during rush hour.' },
+      { id: 'LAX-2110', channel: 'App', title: 'Water line leak at intersection', severity: 'Moderate', status: 'New', location: 'Hollywood', eta: '3h', summary: 'Potential roadway undermining and pedestrian hazard.' },
+      { id: 'LAX-2115', channel: 'Web Portal', title: 'Abandoned waste at school perimeter', severity: 'Moderate', status: 'Action Taken', location: 'South LA', eta: 'Completed', summary: 'Site secured, cleanup done, and monitoring camera request submitted.' },
+    ],
+  },
+  {
+    id: 'miami-dade',
+    name: 'Miami-Dade County Government',
+    type: 'County Government',
+    region: 'US-FL',
+    status: 'Planning',
+    confidence: 84,
+    heroImage: 'https://images.unsplash.com/photo-1514214246283-d427a95c5d2f?auto=format&fit=crop&w=1400&q=80',
+    kpis: [
+      { label: 'County Service Requests', value: '1,204', delta: '+2.4%' },
+      { label: 'Resolved (7d)', value: '3,501', delta: '+8.1%' },
+      { label: 'Avg Response', value: '3.0h', delta: '-0.6h' },
+      { label: 'SLA', value: '89%', delta: '+1.5%' },
+    ],
+    valueStats: [
+      { label: 'Inter-Agency Time Saved', value: '33h/week' },
+      { label: 'Duplicate Cases Reduced', value: '-28%' },
+      { label: 'Backlog Reduction', value: '-17%' },
+    ],
+    modules: ['County Ops Board', 'Agency Handoff Queue', 'Storm Risk Watch', 'Constituent Portal'],
+    reports: [
+      { id: 'MD-301', channel: 'Web Portal', title: 'Flood drainage obstruction', severity: 'High', status: 'New', location: 'Hialeah', eta: '90m', summary: 'Stormwater channel blocked ahead of forecast rainfall event.' },
+      { id: 'MD-309', channel: 'App', title: 'Street debris accumulation', severity: 'Moderate', status: 'Investigating', location: 'Coral Gables', eta: '5h', summary: 'Repeated debris pickup misses on key commuter routes.' },
+      { id: 'MD-320', channel: 'Hotline', title: 'Public lighting outage cluster', severity: 'Moderate', status: 'Action Taken', location: 'Kendall', eta: 'Completed', summary: 'Utility partner dispatched and restoration verified.' },
+    ],
+  },
+  {
+    id: 'lausd',
+    name: 'Los Angeles Unified School District',
+    type: 'School District',
+    region: 'US-CA',
+    status: 'Active',
+    confidence: 93,
+    heroImage: 'https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?auto=format&fit=crop&w=1400&q=80',
+    kpis: [
+      { label: 'Campus Cases', value: '612', delta: '-4.1%' },
+      { label: 'Interventions', value: '322', delta: '+8.8%' },
+      { label: 'Parent Updates', value: '1,840', delta: '+13.6%' },
+      { label: 'SLA', value: '92%', delta: '+2.0%' },
+    ],
+    valueStats: [
+      { label: 'Escalations Resolved <24h', value: '79%' },
+      { label: 'Repeat Incidents Reduced', value: '-26%' },
+      { label: 'Counselor Productivity', value: '+24%' },
+    ],
+    modules: ['District Safety Board', 'Campus Escalation Queue', 'Parent Communication Hub', 'Counselor Load Balancer'],
+    reports: [
+      { id: 'LAUSD-45', channel: 'App', title: 'Physical altercation at lunch area', severity: 'High', status: 'Investigating', location: 'Central HS', eta: '30m', summary: 'De-escalation team engaged; guardian communication started.' },
+      { id: 'LAUSD-49', channel: 'WhatsApp', title: 'Unsafe pickup traffic pattern', severity: 'Moderate', status: 'New', location: 'Westside MS', eta: '2h', summary: 'Traffic safety intervention requested for dismissal window.' },
+      { id: 'LAUSD-53', channel: 'Web Portal', title: 'HVAC safety complaint', severity: 'Moderate', status: 'Action Taken', location: 'South ES', eta: 'Completed', summary: 'Maintenance completed with post-inspection signoff.' },
+    ],
+  },
+  {
+    id: 'target-retail',
+    name: 'Target Retail Safety Operations',
+    type: 'Retail Chain',
+    region: 'US-NATIONAL',
+    status: 'Pilot',
+    confidence: 86,
+    heroImage: 'https://images.unsplash.com/photo-1604719312566-8912e9c8a213?auto=format&fit=crop&w=1400&q=80',
+    kpis: [
+      { label: 'Store Incidents', value: '438', delta: '-5.6%' },
+      { label: 'Resolved (7d)', value: '1,030', delta: '+9.9%' },
+      { label: 'Avg Response', value: '1.5h', delta: '-0.2h' },
+      { label: 'SLA', value: '93%', delta: '+1.4%' },
+    ],
+    valueStats: [
+      { label: 'Loss Prevention Impact', value: '$290k/mo' },
+      { label: 'Safety Claim Reduction', value: '-18%' },
+      { label: 'Manager Productivity', value: '+16%' },
+    ],
+    modules: ['Store Risk Feed', 'Regional Escalation Matrix', 'Case Evidence Vault', 'Customer Safety Portal'],
+    reports: [
+      { id: 'TRG-88', channel: 'App', title: 'Slip hazard near loading bay', severity: 'High', status: 'New', location: 'Store #1142', eta: '25m', summary: 'High foot traffic area with potential injury exposure.' },
+      { id: 'TRG-96', channel: 'Field Team', title: 'Security camera blind spot', severity: 'Moderate', status: 'Investigating', location: 'Store #982', eta: '4h', summary: 'Coverage gap during evening shift in high-value aisle.' },
+      { id: 'TRG-101', channel: 'Web Portal', title: 'Repeat theft pattern flagged', severity: 'Moderate', status: 'Action Taken', location: 'Store #450', eta: 'Completed', summary: 'Staffing and surveillance pattern updated.' },
+    ],
+  },
+  {
+    id: 'fedex-logistics',
+    name: 'FedEx Logistics Risk Control',
+    type: 'Logistics Company',
+    region: 'US-NATIONAL',
+    status: 'Planning',
+    confidence: 82,
+    heroImage: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1400&q=80',
+    kpis: [
+      { label: 'Route Incidents', value: '217', delta: '-3.8%' },
+      { label: 'Resolved (7d)', value: '588', delta: '+7.7%' },
+      { label: 'Avg Response', value: '2.0h', delta: '-0.4h' },
+      { label: 'SLA', value: '90%', delta: '+1.0%' },
+    ],
+    valueStats: [
+      { label: 'Delivery Delay Reduction', value: '-14%' },
+      { label: 'Insurance Exposure', value: '-12%' },
+      { label: 'Hub Throughput Lift', value: '+11%' },
+    ],
+    modules: ['Hub Disruption Board', 'Driver Safety Queue', 'Claims Triage', 'Regional Ops Timeline'],
+    reports: [
+      { id: 'FDX-31', channel: 'Field Team', title: 'Dock safety incident', severity: 'High', status: 'Investigating', location: 'Memphis Hub', eta: '1h', summary: 'Loading path obstruction with repeated near-miss logs.' },
+      { id: 'FDX-36', channel: 'App', title: 'Route delay due to access blockage', severity: 'Moderate', status: 'New', location: 'Dallas Route 7', eta: '2h', summary: 'Last-mile route impacted by recurring curbside restrictions.' },
+      { id: 'FDX-40', channel: 'Web Portal', title: 'Package handling compliance issue', severity: 'Moderate', status: 'Action Taken', location: 'Phoenix Hub', eta: 'Completed', summary: 'Corrective coaching completed; monitoring active.' },
+    ],
+  },
 ];
 
 const uniqueByType: Record<EntityType, { headline: string; color: string; channelFocus: string[]; layout: 'city' | 'hospital' | 'school' | 'default' }> = {
   City: { headline: 'Urban Command Channel', color: '#38bdf8', channelFocus: ['Citizen WhatsApp Intake', 'Field Inspector App', 'Public Portal Reports'], layout: 'city' },
+  'County Government': { headline: 'County Operations Channel', color: '#60a5fa', channelFocus: ['Constituent Portal', 'Cross-Agency Workflow', 'Emergency Readiness'], layout: 'default' },
   'Hospital Network': { headline: 'Clinical Safety Channel', color: '#22c55e', channelFocus: ['Ward Supervisor Hotline', 'Compliance Web Form', 'Clinical Team Mobile'], layout: 'hospital' },
   'School District': { headline: 'Campus Safety Channel', color: '#a78bfa', channelFocus: ['Parent App Reporting', 'Anonymous Web Intake', 'Counselor Escalation Queue'], layout: 'school' },
   University: { headline: 'Academic Integrity Channel', color: '#14b8a6', channelFocus: ['Student Portal', 'Faculty Oversight Board', 'Campus Security Feed'], layout: 'default' },
   'Transit Agency': { headline: 'Mobility Reliability Channel', color: '#f59e0b', channelFocus: ['Station Hotline', 'Driver Mobile Alerts', 'Commuter Web Reports'], layout: 'default' },
+  'Police Department': { headline: 'Public Safety Response Channel', color: '#0284c7', channelFocus: ['911 Intake Sync', 'Patrol Dispatch', 'Evidence Workflow'], layout: 'default' },
+  'Fire Department': { headline: 'Emergency Fire Ops Channel', color: '#f97316', channelFocus: ['Incident Command', 'Station Readiness', 'Response Timeline'], layout: 'default' },
   'Housing Authority': { headline: 'Tenant Protection Channel', color: '#ef4444', channelFocus: ['Tenant WhatsApp Intake', 'Inspector Field Workflow', 'Legal Case Pipeline'], layout: 'default' },
   'Utilities Provider': { headline: 'Service Continuity Channel', color: '#84cc16', channelFocus: ['Outage Mobile Alerts', 'Regulator Portal', 'Crew Dispatch Terminal'], layout: 'default' },
+  'Retail Chain': { headline: 'Retail Risk Control Channel', color: '#f43f5e', channelFocus: ['Store Incident Intake', 'Loss Prevention Queue', 'Regional Ops Console'], layout: 'default' },
+  'Logistics Company': { headline: 'Logistics Resilience Channel', color: '#0ea5e9', channelFocus: ['Hub Incident Feed', 'Driver Safety Alerts', 'Route Disruption Queue'], layout: 'default' },
+  'Banking Group': { headline: 'Financial Operations Channel', color: '#22c55e', channelFocus: ['Branch Incident Intake', 'Fraud Risk Triage', 'Compliance Escalation'], layout: 'default' },
+  'Insurance Provider': { headline: 'Claims Integrity Channel', color: '#10b981', channelFocus: ['Claims Risk Queue', 'Field Assessment', 'Liability Tracker'], layout: 'default' },
+  'Telecom Provider': { headline: 'Network Reliability Channel', color: '#8b5cf6', channelFocus: ['Outage Reports', 'Tower Dispatch', 'Customer Transparency'], layout: 'default' },
+  'Airport Authority': { headline: 'Aviation Operations Channel', color: '#06b6d4', channelFocus: ['Terminal Incident Feed', 'Ground Ops Dispatch', 'Safety Audit Stream'], layout: 'default' },
 };
 
 const CATEGORY_SHOWCASE: Array<{ type: EntityType; image: string; caption: string }> = [
-  { type: 'City', image: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=900&q=80', caption: 'City command and citizen intake operations' },
+  { type: 'City', image: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=900&q=80', caption: 'US city command and citizen intake operations' },
+  { type: 'County Government', image: 'https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=900&q=80', caption: 'County-level multi-agency coordination' },
   { type: 'Hospital Network', image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=900&q=80', caption: 'Clinical safety, compliance and incident review' },
   { type: 'School District', image: 'https://images.unsplash.com/photo-1503676382389-4809596d5290?auto=format&fit=crop&w=900&q=80', caption: 'Campus welfare and parent transparency channel' },
   { type: 'University', image: 'https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?auto=format&fit=crop&w=900&q=80', caption: 'Academic integrity and governance workflows' },
   { type: 'Transit Agency', image: 'https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&w=900&q=80', caption: 'Route reliability and disruption response center' },
+  { type: 'Police Department', image: 'https://images.unsplash.com/photo-1489686995744-f47e995ffe61?auto=format&fit=crop&w=900&q=80', caption: 'Public safety response and evidence workflow' },
+  { type: 'Fire Department', image: 'https://images.unsplash.com/photo-1611839291634-7a16d68d4f57?auto=format&fit=crop&w=900&q=80', caption: 'Emergency dispatch and station readiness' },
   { type: 'Housing Authority', image: 'https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=900&q=80', caption: 'Tenant safety and structural risk management' },
   { type: 'Utilities Provider', image: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=900&q=80', caption: 'Outage restoration and infrastructure oversight' },
+  { type: 'Retail Chain', image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=900&q=80', caption: 'Store safety, loss prevention and operations' },
+  { type: 'Logistics Company', image: 'https://images.unsplash.com/photo-1501700493788-fa1a4fc9fe62?auto=format&fit=crop&w=900&q=80', caption: 'Hub disruptions and route risk control' },
+  { type: 'Banking Group', image: 'https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&w=900&q=80', caption: 'Branch incident and fraud risk oversight' },
+  { type: 'Insurance Provider', image: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=900&q=80', caption: 'Claims integrity and liability reduction' },
+  { type: 'Telecom Provider', image: 'https://images.unsplash.com/photo-1584277261846-c6a1672ed979?auto=format&fit=crop&w=900&q=80', caption: 'Network outage management and response' },
+  { type: 'Airport Authority', image: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=900&q=80', caption: 'Terminal ops, safety cases and dispatch' },
 ];
 
 export default function EnhancedNexusPrototype() {
@@ -345,6 +528,18 @@ export default function EnhancedNexusPrototype() {
           ))}
         </section>
 
+        <section style={styles.railwayCard}>
+          <div>
+            <div style={styles.panelLabel}>Railway Deployment Readiness</div>
+            <div style={{ color: '#cbd5e1', marginTop: 4 }}>UI is now structured so each category/entity can map to a Railway-backed API route in DPAL.</div>
+          </div>
+          <div style={styles.channelWrap}>
+            <span style={styles.channelChip}>/api/entities/:id</span>
+            <span style={styles.channelChip}>/api/reports/:id/actions</span>
+            <span style={styles.channelChip}>/api/dashboard/:type</span>
+          </div>
+        </section>
+
         <section style={styles.twoCol}>
           <div style={styles.card}>
             {activeArea === 'reports' && (
@@ -477,6 +672,7 @@ const styles: Record<string, React.CSSProperties> = {
   uniqueGrid2: { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' },
   miniTile: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: '#0f172a' },
   navCard: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: 'rgba(11,18,32,0.86)', display: 'flex', gap: 8, flexWrap: 'wrap' },
+  railwayCard: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: 'rgba(11,18,32,0.86)', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' },
   sectionBtn: { border: '1px solid #334155', background: '#0f172a', color: '#cbd5e1', borderRadius: 9, padding: '8px 10px', cursor: 'pointer', fontWeight: 700 },
   sectionBtnActive: { borderColor: '#2563eb', background: '#1d4ed8', color: '#fff' },
   twoCol: { display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 12 },
