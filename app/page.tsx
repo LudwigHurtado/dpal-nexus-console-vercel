@@ -635,6 +635,7 @@ export default function EnhancedNexusPrototype() {
   const [newItemChannel, setNewItemChannel] = useState<Report['channel']>('App');
   const [newItemLocation, setNewItemLocation] = useState('');
   const [newItemFields, setNewItemFields] = useState<Record<string, string>>({});
+  const [mockLinkResponse, setMockLinkResponse] = useState('');
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(ENTITIES.map((e) => e.type)))] as const, []);
   const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
@@ -868,6 +869,49 @@ export default function EnhancedNexusPrototype() {
       assignedTo: target,
       note: `Referred to ${target} from reports queue`,
     });
+  };
+
+  const categoryLinks = (type: EntityType) => {
+    const base: Array<{ label: string; action: string }> = [
+      { label: 'Open Policy Playbook', action: 'Policy guidance loaded for this category.' },
+      { label: 'Open Compliance Checklist', action: 'Compliance checklist generated with required controls.' },
+      { label: 'Open Partner Referral Guide', action: 'Referral map prepared for agency/partner handoff.' },
+    ];
+
+    const byType: Partial<Record<EntityType, Array<{ label: string; action: string }>>> = {
+      City: [
+        { label: 'City Department Routing', action: 'Routing matrix loaded for Public Works / Safety / Legal.' },
+        { label: 'Citizen Alert Draft', action: 'Public advisory draft prepared for city communications.' },
+      ],
+      'Hospital Network': [
+        { label: 'Clinical Incident SOP', action: 'Clinical safety SOP opened for rapid response workflow.' },
+        { label: 'Regulatory Packet Builder', action: 'Mock regulatory packet assembled for review.' },
+      ],
+      'School District': [
+        { label: 'Campus Escalation Protocol', action: 'Campus-level escalation path displayed for admin/counselor.' },
+        { label: 'Parent Communication Template', action: 'Parent-safe communication draft generated.' },
+      ],
+      'Banking Group': [
+        { label: 'Consumer Harm Scoring Guide', action: 'Harm scoring rules loaded for fraud/misconduct complaints.' },
+        { label: 'Restitution Workflow', action: 'Restitution tracking workflow preview opened.' },
+      ],
+      'Housing Authority': [
+        { label: 'Tenant Protection Workflow', action: 'Tenant safety and inspection workflow preview loaded.' },
+        { label: 'Legal Escalation Matrix', action: 'Legal escalation conditions and SLA shown.' },
+      ],
+      'Utilities Provider': [
+        { label: 'Outage Risk SOP', action: 'Outage response SOP opened for operations and field teams.' },
+        { label: 'Regulator Notification Template', action: 'Regulatory notification draft generated.' },
+      ],
+    };
+
+    return [...(byType[type] || []), ...base];
+  };
+
+  const openMockCategoryLink = (label: string, action: string) => {
+    const msg = `Mock Link: ${label}\n${action}\n(Ready for real route integration)`;
+    setMockLinkResponse(msg);
+    logAction(`Opened category link: ${label}`);
   };
 
   const profile = uniqueByType[selectedEntity.type];
@@ -1545,6 +1589,22 @@ export default function EnhancedNexusPrototype() {
                       )}
                     </>
                   )}
+                </div>
+
+                <div style={{ ...styles.recommendCard, marginTop: 10 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Category Links ({selectedEntity.type})</div>
+                  <div style={styles.referRow}>
+                    {categoryLinks(selectedEntity.type).map((link) => (
+                      <button
+                        key={`${selectedEntity.type}-${link.label}`}
+                        style={styles.referBtn}
+                        onClick={() => openMockCategoryLink(link.label, link.action)}
+                      >
+                        {link.label}
+                      </button>
+                    ))}
+                  </div>
+                  <pre style={styles.briefText}>{mockLinkResponse || 'Select a category link to view mock response and intended behavior.'}</pre>
                 </div>
 
                 <div style={styles.actionButtons}>
