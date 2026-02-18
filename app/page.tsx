@@ -449,8 +449,15 @@ export default function EnhancedNexusPrototype() {
   const [assignedTo, setAssignedTo] = useState('');
   const [actionNote, setActionNote] = useState('');
   const [auditEntries, setAuditEntries] = useState<string[]>([]);
+  const [showAllCategories, setShowAllCategories] = useState(false);
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(ENTITIES.map((e) => e.type)))] as const, []);
+  const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
+  const categoryCards = useMemo(() => {
+    if (showAllCategories) return CATEGORY_SHOWCASE;
+    const featured = CATEGORY_SHOWCASE.filter((c) => featuredCategoryTypes.includes(c.type));
+    return featured.length ? featured : CATEGORY_SHOWCASE.slice(0, 6);
+  }, [showAllCategories, featuredCategoryTypes]);
   const filteredEntities = useMemo(() => (selectedType === 'All' ? ENTITIES : ENTITIES.filter((e) => e.type === selectedType)), [selectedType]);
   const selectedEntity = filteredEntities.find((entity) => entity.id === selectedEntityId) || filteredEntities[0] || ENTITIES[0];
   const currentReports = reportsByEntity[selectedEntity.id] || [];
@@ -717,32 +724,41 @@ export default function EnhancedNexusPrototype() {
           </div>
         </section>
 
-        <section style={styles.showcaseGrid}>
-          {CATEGORY_SHOWCASE.map((category) => {
-            const hasEntity = ENTITIES.some((entity) => entity.type === category.type);
-            return (
-              <button
-                key={category.type}
-                style={{ ...styles.showcaseCard, opacity: hasEntity ? 1 : 0.7 }}
-                onClick={() => {
-                  setSelectedType(category.type);
-                  const first = ENTITIES.find((entity) => entity.type === category.type);
-                  if (first) {
-                    setSelectedEntityId(first.id);
-                    setSelectedReportId(first.reports[0]?.id || '');
-                    logAction(`Opened category card: ${category.type}`);
-                  }
-                }}
-                title={hasEntity ? `Open ${category.type}` : `${category.type} demo coming next`}
-              >
-                <img src={category.image} alt={category.type} style={styles.showcaseImage} />
-                <div style={styles.showcaseBody}>
-                  <div style={styles.showcaseTag}>{category.type}</div>
-                  <div style={{ color: '#cbd5e1', fontSize: 13 }}>{category.caption}</div>
-                </div>
-              </button>
-            );
-          })}
+        <section style={styles.showcasePanel}>
+          <div style={styles.showcaseHeader}>
+            <div style={styles.panelLabel}>Categories</div>
+            <button style={styles.smallBtn} onClick={() => setShowAllCategories((v) => !v)}>
+              {showAllCategories ? 'Show fewer' : 'Show all categories'}
+            </button>
+          </div>
+
+          <div style={styles.showcaseGrid}>
+            {categoryCards.map((category) => {
+              const hasEntity = ENTITIES.some((entity) => entity.type === category.type);
+              return (
+                <button
+                  key={category.type}
+                  style={{ ...styles.showcaseCard, opacity: hasEntity ? 1 : 0.7 }}
+                  onClick={() => {
+                    setSelectedType(category.type);
+                    const first = ENTITIES.find((entity) => entity.type === category.type);
+                    if (first) {
+                      setSelectedEntityId(first.id);
+                      setSelectedReportId(first.reports[0]?.id || '');
+                      logAction(`Opened category card: ${category.type}`);
+                    }
+                  }}
+                  title={hasEntity ? `Open ${category.type}` : `${category.type} demo coming next`}
+                >
+                  <img src={category.image} alt={category.type} style={styles.showcaseImage} />
+                  <div style={styles.showcaseBody}>
+                    <div style={styles.showcaseTag}>{category.type}</div>
+                    <div style={{ color: '#cbd5e1', fontSize: 13 }}>{category.caption}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </section>
 
         <section style={styles.heroImageCard}>
@@ -964,9 +980,11 @@ const styles: Record<string, React.CSSProperties> = {
   chipActive: { borderColor: '#2563eb', background: '#1d4ed8', color: '#fff' },
   row: { display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' },
   select: { minWidth: 320, background: '#0f172a', color: '#e2e8f0', border: '1px solid #334155', borderRadius: 10, padding: '10px 12px' },
-  showcaseGrid: { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))' },
+  showcasePanel: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: 'rgba(11,18,32,0.86)' },
+  showcaseHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 10 },
+  showcaseGrid: { display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))' },
   showcaseCard: { border: '1px solid #334155', borderRadius: 14, overflow: 'hidden', background: '#0b1220', cursor: 'pointer', padding: 0, textAlign: 'left' },
-  showcaseImage: { width: '100%', height: 110, objectFit: 'cover', display: 'block' },
+  showcaseImage: { width: '100%', height: 84, objectFit: 'cover', display: 'block' },
   showcaseBody: { padding: 10, display: 'grid', gap: 6 },
   showcaseTag: { color: '#93c5fd', fontSize: 12, fontWeight: 800, textTransform: 'uppercase' },
   heroImageCard: { position: 'relative', borderRadius: 16, overflow: 'hidden', border: '1px solid #334155', minHeight: 220 },
