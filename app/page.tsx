@@ -459,6 +459,44 @@ const CATEGORY_INFO_NEEDS: Record<EntityType, Array<{ label: string; value: stri
   ],
 };
 
+const CATEGORY_ICONS: Record<EntityType, string> = {
+  City: '🏙️',
+  'County Government': '🗺️',
+  'Hospital Network': '🏥',
+  'School District': '🏫',
+  University: '🎓',
+  'Transit Agency': '🚇',
+  'Police Department': '🚔',
+  'Fire Department': '🚒',
+  'Housing Authority': '🏘️',
+  'Utilities Provider': '⚡',
+  'Retail Chain': '🛍️',
+  'Logistics Company': '📦',
+  'Banking Group': '🏦',
+  'Insurance Provider': '🛡️',
+  'Telecom Provider': '📡',
+  'Airport Authority': '✈️',
+};
+
+function categoryImageForType(type: EntityType): string {
+  const icon = CATEGORY_ICONS[type] || '🧩';
+  const svg = `
+    <svg xmlns='http://www.w3.org/2000/svg' width='1200' height='600'>
+      <defs>
+        <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
+          <stop offset='0%' stop-color='#0b5fff'/>
+          <stop offset='100%' stop-color='#0f172a'/>
+        </linearGradient>
+      </defs>
+      <rect width='100%' height='100%' fill='url(#g)'/>
+      <text x='72' y='255' font-size='118' fill='white' font-family='Segoe UI Emoji, Apple Color Emoji'>${icon}</text>
+      <text x='72' y='350' font-size='56' fill='#dbeafe' font-family='Inter, Segoe UI, Arial' font-weight='700'>${type}</text>
+      <text x='72' y='406' font-size='26' fill='#93c5fd' font-family='Inter, Segoe UI, Arial'>DPAL Nexus category visual</text>
+    </svg>
+  `;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
 const CATEGORY_INTAKE_FIELDS: Record<EntityType, IntakeField[]> = {
   City: [
     { key: 'district', label: 'District / Zone', placeholder: 'e.g., Downtown / Zone 4' },
@@ -644,9 +682,14 @@ export default function EnhancedNexusPrototype() {
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(ENTITIES.map((e) => e.type)))] as const, []);
   const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
   const categoryCards = useMemo(() => {
-    if (showAllCategories) return CATEGORY_SHOWCASE;
-    const featured = CATEGORY_SHOWCASE.filter((c) => featuredCategoryTypes.includes(c.type));
-    return featured.length ? featured : CATEGORY_SHOWCASE.slice(0, 6);
+    const base = showAllCategories
+      ? CATEGORY_SHOWCASE
+      : (() => {
+          const featured = CATEGORY_SHOWCASE.filter((c) => featuredCategoryTypes.includes(c.type));
+          return featured.length ? featured : CATEGORY_SHOWCASE.slice(0, 6);
+        })();
+
+    return base.map((c) => ({ ...c, image: categoryImageForType(c.type) }));
   }, [showAllCategories, featuredCategoryTypes]);
   const filteredEntities = useMemo(() => (selectedType === 'All' ? ENTITIES : ENTITIES.filter((e) => e.type === selectedType)), [selectedType]);
   const selectedEntity = filteredEntities.find((entity) => entity.id === selectedEntityId) || filteredEntities[0] || ENTITIES[0];
@@ -1008,7 +1051,7 @@ export default function EnhancedNexusPrototype() {
   const infoNeeds = CATEGORY_INFO_NEEDS[selectedEntity.type] || [];
   const playbook = CATEGORY_PLAYBOOKS[selectedEntity.type];
   const intakeFields = CATEGORY_INTAKE_FIELDS[selectedEntity.type] || [];
-  const categoryVisual = CATEGORY_SHOWCASE.find((c) => c.type === selectedEntity.type);
+  const activeCategoryImage = categoryImageForType(selectedEntity.type);
 
   const referralTargets = (report: Report): string[] => {
     const baseByType: Record<EntityType, string[]> = {
@@ -1348,7 +1391,15 @@ export default function EnhancedNexusPrototype() {
         </section>
 
         <section style={styles.heroImageCard}>
-          <img src={selectedEntity.heroImage} alt={selectedEntity.name} style={styles.heroImage} />
+          <img
+            src={activeCategoryImage}
+            alt={selectedEntity.name}
+            style={styles.heroImage}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = categoryImageForType(selectedEntity.type);
+            }}
+          />
           <div style={styles.heroOverlay}>
             <div style={{ ...styles.panelLabel, color: profile.color }}>{profile.headline}</div>
             <h2 style={{ margin: '4px 0 0 0' }}>{selectedEntity.name}</h2>
@@ -1391,7 +1442,15 @@ export default function EnhancedNexusPrototype() {
               <h3 style={styles.cardTitle}>Category Operations Console ({selectedEntity.type})</h3>
               <p style={{ ...styles.subtitle, marginBottom: 10 }}>{playbook.operationalObjective}</p>
             </div>
-            {categoryVisual?.image && <img src={categoryVisual.image} alt={selectedEntity.type} style={styles.playbookImage} />}
+            <img
+              src={activeCategoryImage}
+              alt={selectedEntity.type}
+              style={styles.playbookImage}
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = categoryImageForType(selectedEntity.type);
+              }}
+            />
           </div>
 
           <div style={styles.playbookSteps}>
