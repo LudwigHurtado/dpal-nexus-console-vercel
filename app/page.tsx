@@ -636,6 +636,7 @@ export default function EnhancedNexusPrototype() {
   const [newItemLocation, setNewItemLocation] = useState('');
   const [newItemFields, setNewItemFields] = useState<Record<string, string>>({});
   const [mockLinkResponse, setMockLinkResponse] = useState('');
+  const [interactionMessage, setInteractionMessage] = useState('');
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(ENTITIES.map((e) => e.type)))] as const, []);
   const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
@@ -911,7 +912,36 @@ export default function EnhancedNexusPrototype() {
   const openMockCategoryLink = (label: string, action: string) => {
     const msg = `Mock Link: ${label}\n${action}\n(Ready for real route integration)`;
     setMockLinkResponse(msg);
+    setInteractionMessage(`Opened ${label}`);
     logAction(`Opened category link: ${label}`);
+  };
+
+  const runItemInteraction = async (report: Report, kind: 'request-evidence' | 'escalate-legal' | 'notify-public' | 'duplicate-check') => {
+    if (kind === 'request-evidence') {
+      await updateReportStatus(report.id, 'Action Taken', {
+        note: 'Evidence request issued: photos, timeline, and supporting docs requested.',
+      });
+      setInteractionMessage(`Evidence request issued for ${report.id}`);
+      return;
+    }
+
+    if (kind === 'escalate-legal') {
+      await updateReportStatus(report.id, 'Investigating', {
+        assignedTo: 'Legal/Enforcement',
+        note: 'Case escalated to legal review due to risk profile.',
+      });
+      setInteractionMessage(`Case ${report.id} escalated to legal.`);
+      return;
+    }
+
+    if (kind === 'notify-public') {
+      setInteractionMessage(`Public advisory draft prepared for ${report.id} (mock response).`);
+      logAction(`Prepared public advisory draft for ${report.id}`);
+      return;
+    }
+
+    setInteractionMessage(`Duplicate scan complete for ${report.id}: possible 2 related reports found (mock).`);
+    logAction(`Duplicate scan run for ${report.id}`);
   };
 
   const profile = uniqueByType[selectedEntity.type];
@@ -1106,6 +1136,12 @@ export default function EnhancedNexusPrototype() {
     setActiveArea('analytics');
     logAgent('Generated category action plan for executive briefing.');
   };
+
+  useEffect(() => {
+    if (activeArea === 'analytics' && !executiveBriefLoading && !executiveBrief) {
+      void generateExecutiveBrief();
+    }
+  }, [activeArea, selectedEntity.id]);
 
   const renderEntityLayout = () => {
     if (profile.layout === 'city') {
@@ -1353,6 +1389,12 @@ export default function EnhancedNexusPrototype() {
           ))}
         </section>
 
+        {interactionMessage && (
+          <section style={styles.interactionBanner}>
+            <strong>Interaction:</strong> {interactionMessage}
+          </section>
+        )}
+
         <section style={styles.railwayCard}>
           <div style={{ flex: 1, minWidth: 280 }}>
             <div style={styles.panelLabel}>Railway + Mongo Integration</div>
@@ -1441,6 +1483,10 @@ export default function EnhancedNexusPrototype() {
                         <button style={styles.referBtnPrimary} onClick={() => void updateReportStatus(r.id, 'Action Taken', { note: 'Immediate mitigation started from queue' })}>
                           Take Action
                         </button>
+                        <button style={styles.referBtn} onClick={() => void runItemInteraction(r, 'request-evidence')}>Request Evidence</button>
+                        <button style={styles.referBtn} onClick={() => void runItemInteraction(r, 'escalate-legal')}>Escalate Legal</button>
+                        <button style={styles.referBtn} onClick={() => void runItemInteraction(r, 'duplicate-check')}>Check Duplicates</button>
+                        <button style={styles.referBtn} onClick={() => void runItemInteraction(r, 'notify-public')}>Draft Public Alert</button>
                       </div>
                     </div>
                   ))}
@@ -1610,6 +1656,8 @@ export default function EnhancedNexusPrototype() {
                 <div style={styles.actionButtons}>
                   <button style={styles.smallBtn} onClick={() => openArea('dispatch')}>Go to Action Center</button>
                   <button style={styles.smallBtn} onClick={() => openArea('audit')}>Open Audit Trail</button>
+                  <button style={styles.smallBtn} onClick={() => void runItemInteraction(selectedReport, 'request-evidence')}>Request Evidence</button>
+                  <button style={styles.smallBtn} onClick={() => void runItemInteraction(selectedReport, 'escalate-legal')}>Escalate Legal</button>
                   <button style={styles.smallBtnPrimary} onClick={() => selectedReport && updateReportStatus(selectedReport.id, 'Resolved')}>Resolve Now</button>
                 </div>
               </>
@@ -1685,6 +1733,7 @@ const styles: Record<string, React.CSSProperties> = {
   miniTile: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: '#0f172a' },
   navCard: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: 'rgba(11,18,32,0.86)', display: 'flex', gap: 8, flexWrap: 'wrap' },
   railwayCard: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: 'rgba(11,18,32,0.86)', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' },
+  interactionBanner: { border: '1px solid #2563eb', borderRadius: 10, padding: '8px 10px', background: 'rgba(37,99,235,0.12)', color: '#dbeafe', fontSize: 13 },
   sectionBtn: { border: '1px solid #334155', background: '#0f172a', color: '#cbd5e1', borderRadius: 9, padding: '8px 10px', cursor: 'pointer', fontWeight: 700 },
   sectionBtnActive: { borderColor: '#2563eb', background: '#1d4ed8', color: '#fff' },
   twoCol: { display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 12 },
