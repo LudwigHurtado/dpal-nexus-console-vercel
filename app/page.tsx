@@ -653,6 +653,7 @@ const CATEGORY_PLAYBOOKS: Record<EntityType, CategoryPlaybook> = {  City: {
 };
 
 export default function EnhancedNexusPrototype() {
+  const [entities, setEntities] = useState<Entity[]>(ENTITIES);
   const [selectedType, setSelectedType] = useState<EntityType | 'All'>('All');
   const [selectedEntityId, setSelectedEntityId] = useState('nyc-city');
   const [view, setView] = useState<DashboardView>('Executive');
@@ -698,8 +699,11 @@ export default function EnhancedNexusPrototype() {
   const [personOfInterest, setPersonOfInterest] = useState('');
   const [auditWorkItems, setAuditWorkItems] = useState<Array<{ id: string; title: string; assignee: string; status: 'Open' | 'In Review' | 'Closed' }>>([]);
   const [poiItems, setPoiItems] = useState<Array<{ id: string; name: string; risk: 'Low' | 'Moderate' | 'High'; note: string }>>([]);
+  const [entityEditorName, setEntityEditorName] = useState('');
+  const [entityEditorRegion, setEntityEditorRegion] = useState('');
+  const [entityEditorStatus, setEntityEditorStatus] = useState<Status>('Active');
 
-  const typeOptions = useMemo(() => ['All', ...Array.from(new Set(ENTITIES.map((e) => e.type)))] as const, []);
+  const typeOptions = useMemo(() => ['All', ...Array.from(new Set(entities.map((e) => e.type)))] as const, [entities]);
   const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
   const categoryCards = useMemo(() => {
     const base = showAllCategories
@@ -711,8 +715,8 @@ export default function EnhancedNexusPrototype() {
 
     return base.map((c) => ({ ...c, image: categoryImageForType(c.type) }));
   }, [showAllCategories, featuredCategoryTypes]);
-  const filteredEntities = useMemo(() => (selectedType === 'All' ? ENTITIES : ENTITIES.filter((e) => e.type === selectedType)), [selectedType]);
-  const selectedEntity = filteredEntities.find((entity) => entity.id === selectedEntityId) || filteredEntities[0] || ENTITIES[0];
+  const filteredEntities = useMemo(() => (selectedType === 'All' ? entities : entities.filter((e) => e.type === selectedType)), [selectedType, entities]);
+  const selectedEntity = filteredEntities.find((entity) => entity.id === selectedEntityId) || filteredEntities[0] || entities[0];
   const currentReports = reportsByEntity[selectedEntity.id] || [];
   const selectedReport = currentReports.find((r) => r.id === selectedReportId) || currentReports[0];
 
@@ -735,6 +739,55 @@ export default function EnhancedNexusPrototype() {
   const logAgent = (text: string) => {
     const stamp = new Date().toLocaleTimeString();
     setAgentLog((prev) => [`${stamp} - ${text}`, ...prev].slice(0, 12));
+  };
+
+  const selectEntityByIndexShift = (shift: number) => {
+    if (!filteredEntities.length) return;
+    const currentIndex = filteredEntities.findIndex((e) => e.id === selectedEntity.id);
+    const nextIndex = (currentIndex + shift + filteredEntities.length) % filteredEntities.length;
+    const nextEntity = filteredEntities[nextIndex];
+    setSelectedEntityId(nextEntity.id);
+    setSelectedReportId((reportsByEntity[nextEntity.id] || nextEntity.reports)[0]?.id || '');
+    logAction(`Switched entity to ${nextEntity.name}`);
+  };
+
+  const createEntityFromEditor = () => {
+    if (!entityEditorName.trim()) return;
+    const typeForCreate: EntityType = selectedType === 'All' ? selectedEntity.type : selectedType;
+    const idBase = `${entityEditorName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'entity'}-${Date.now().toString().slice(-5)}`;
+    const created: Entity = {
+      id: idBase,
+      name: entityEditorName.trim(),
+      type: typeForCreate,
+      region: entityEditorRegion.trim() || 'US-NA',
+      status: entityEditorStatus,
+      confidence: 88,
+      heroImage: categoryImageForType(typeForCreate),
+      kpis: selectedEntity.kpis,
+      valueStats: selectedEntity.valueStats,
+      modules: selectedEntity.modules,
+      reports: [],
+    };
+    setEntities((prev) => [created, ...prev]);
+    setReportsByEntity((prev) => ({ ...prev, [created.id]: [] }));
+    setSelectedType(typeForCreate);
+    setSelectedEntityId(created.id);
+    setSelectedReportId('');
+    setInteractionMessage(`Entity created: ${created.name}`);
+    logAction(`Created entity ${created.name} (${created.type})`);
+  };
+
+  const updateCurrentEntity = () => {
+    if (!selectedEntity || !entityEditorName.trim()) return;
+    const updated = {
+      ...selectedEntity,
+      name: entityEditorName.trim(),
+      region: entityEditorRegion.trim() || selectedEntity.region,
+      status: entityEditorStatus,
+    };
+    setEntities((prev) => prev.map((e) => (e.id === selectedEntity.id ? updated : e)));
+    setInteractionMessage(`Entity updated: ${updated.name}`);
+    logAction(`Updated entity ${updated.name}`);
   };
 
   const speakText = (text: string) => {
@@ -822,6 +875,13 @@ export default function EnhancedNexusPrototype() {
     });
     setNewItemFields(base);
   }, [selectedType, selectedEntity.type]);
+
+  useEffect(() => {
+    if (!selectedEntity) return;
+    setEntityEditorName(selectedEntity.name);
+    setEntityEditorRegion(selectedEntity.region);
+    setEntityEditorStatus(selectedEntity.status);
+  }, [selectedEntity.id]);
 
   useEffect(() => {
     if (!apiBase) return;
@@ -1453,7 +1513,7 @@ export default function EnhancedNexusPrototype() {
                 key={type}
                 onClick={() => {
                   setSelectedType(type);
-                  const next = type === 'All' ? ENTITIES[0] : ENTITIES.find((e) => e.type === type);
+                  const next = type === 'All' ? entities[0] : entities.find((e) => e.type === type);
                   if (next) {
                     setSelectedEntityId(next.id);
                     setSelectedReportId(next.reports[0]?.id || '');
@@ -1468,24 +1528,48 @@ export default function EnhancedNexusPrototype() {
           </div>
 
           <div style={styles.row}>
-            <select
-              value={selectedEntity.id}
-              onChange={(e) => {
-                setSelectedEntityId(e.target.value);
-                const entity = ENTITIES.find((x) => x.id === e.target.value);
-                if (entity?.reports[0]) setSelectedReportId(entity.reports[0].id);
-                if (entity) logAction(`Switched entity to ${entity.name}`);
-              }}
-              style={styles.select}
-            >
-              {filteredEntities.map((entity) => (
-                <option key={entity.id} value={entity.id}>{entity.name}</option>
-              ))}
-            </select>
+            <div style={styles.entitySwitcher}>
+              <button style={styles.arrowBtn} onClick={() => selectEntityByIndexShift(-1)} aria-label="Previous entity">←</button>
+              <select
+                value={selectedEntity.id}
+                onChange={(e) => {
+                  setSelectedEntityId(e.target.value);
+                  const entity = entities.find((x) => x.id === e.target.value);
+                  if (entity?.reports[0]) setSelectedReportId(entity.reports[0].id);
+                  if (entity) {
+                    setSelectedType(entity.type);
+                    logAction(`Switched entity to ${entity.name}`);
+                  }
+                }}
+                style={styles.select}
+              >
+                {filteredEntities.map((entity) => (
+                  <option key={entity.id} value={entity.id}>{entity.name}</option>
+                ))}
+              </select>
+              <button style={styles.arrowBtn} onClick={() => selectEntityByIndexShift(1)} aria-label="Next entity">→</button>
+            </div>
             <div style={styles.chipWrap}>
               {DASHBOARD_VIEWS.map((item) => (
                 <button key={item} onClick={() => { setView(item); logAction(`Dashboard view set to ${item}`); }} style={{ ...styles.chip, ...(view === item ? styles.chipActive : {}) }}>{item}</button>
               ))}
+            </div>
+          </div>
+
+          <div style={styles.entityEditorCard}>
+            <div style={styles.panelLabel}>Entity GUI Manager</div>
+            <div style={styles.formGrid}>
+              <input value={entityEditorName} onChange={(e) => setEntityEditorName(e.target.value)} placeholder="Entity name" style={styles.input} />
+              <input value={entityEditorRegion} onChange={(e) => setEntityEditorRegion(e.target.value)} placeholder="Region code (e.g., US-NY)" style={styles.input} />
+              <select value={entityEditorStatus} onChange={(e) => setEntityEditorStatus(e.target.value as Status)} style={styles.input}>
+                <option value="Active">Active</option>
+                <option value="Pilot">Pilot</option>
+                <option value="Planning">Planning</option>
+              </select>
+            </div>
+            <div style={styles.actionButtons}>
+              <button style={styles.smallBtnPrimary} onClick={updateCurrentEntity}>Update Current Entity</button>
+              <button style={styles.smallBtn} onClick={createEntityFromEditor}>Create Entity in Current Type</button>
             </div>
           </div>
         </section>
@@ -1500,14 +1584,14 @@ export default function EnhancedNexusPrototype() {
 
           <div style={styles.showcaseGrid}>
             {categoryCards.map((category) => {
-              const hasEntity = ENTITIES.some((entity) => entity.type === category.type);
+              const hasEntity = entities.some((entity) => entity.type === category.type);
               return (
                 <button
                   key={category.type}
                   style={{ ...styles.showcaseCard, opacity: hasEntity ? 1 : 0.7 }}
                   onClick={() => {
                     setSelectedType(category.type);
-                    const first = ENTITIES.find((entity) => entity.type === category.type);
+                    const first = entities.find((entity) => entity.type === category.type);
                     if (first) {
                       setSelectedEntityId(first.id);
                       setSelectedReportId(first.reports[0]?.id || '');
@@ -2063,7 +2147,10 @@ const styles: Record<string, React.CSSProperties> = {
   chip: { border: '1px solid #334155', background: '#111827', color: '#cbd5e1', borderRadius: 10, padding: '7px 11px', fontWeight: 600, cursor: 'pointer' },
   chipActive: { borderColor: '#2563eb', background: '#1d4ed8', color: '#fff' },
   row: { display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' },
+  entitySwitcher: { display: 'flex', alignItems: 'center', gap: 8 },
+  arrowBtn: { border: '1px solid #334155', background: '#111827', color: '#e2e8f0', borderRadius: 10, padding: '10px 12px', cursor: 'pointer', fontWeight: 800 },
   select: { minWidth: 320, background: '#0f172a', color: '#e2e8f0', border: '1px solid #334155', borderRadius: 10, padding: '10px 12px' },
+  entityEditorCard: { border: '1px dashed #334155', borderRadius: 12, padding: 10, background: 'rgba(15,23,42,0.55)' },
   showcasePanel: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: 'rgba(11,18,32,0.86)' },
   showcaseHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 10 },
   showcaseGrid: { display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))' },
