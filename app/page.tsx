@@ -342,22 +342,22 @@ const uniqueByType: Record<EntityType, { headline: string; color: string; channe
 };
 
 const CATEGORY_SHOWCASE: Array<{ type: EntityType; image: string; caption: string }> = [
-  { type: 'City', image: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=900&q=80', caption: 'US city command and citizen intake operations' },
-  { type: 'County Government', image: 'https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=900&q=80', caption: 'County-level multi-agency coordination' },
-  { type: 'Hospital Network', image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=900&q=80', caption: 'Clinical safety, compliance and incident review' },
-  { type: 'School District', image: 'https://images.unsplash.com/photo-1503676382389-4809596d5290?auto=format&fit=crop&w=900&q=80', caption: 'Campus welfare and parent transparency channel' },
-  { type: 'University', image: 'https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?auto=format&fit=crop&w=900&q=80', caption: 'Academic integrity and governance workflows' },
-  { type: 'Transit Agency', image: 'https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&w=900&q=80', caption: 'Route reliability and disruption response center' },
-  { type: 'Police Department', image: 'https://images.unsplash.com/photo-1489686995744-f47e995ffe61?auto=format&fit=crop&w=900&q=80', caption: 'Public safety response and evidence workflow' },
-  { type: 'Fire Department', image: 'https://images.unsplash.com/photo-1611839291634-7a16d68d4f57?auto=format&fit=crop&w=900&q=80', caption: 'Emergency dispatch and station readiness' },
-  { type: 'Housing Authority', image: 'https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=900&q=80', caption: 'Tenant safety and structural risk management' },
-  { type: 'Utilities Provider', image: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=900&q=80', caption: 'Outage restoration and infrastructure oversight' },
-  { type: 'Retail Chain', image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=900&q=80', caption: 'Store safety, loss prevention and operations' },
-  { type: 'Logistics Company', image: 'https://images.unsplash.com/photo-1501700493788-fa1a4fc9fe62?auto=format&fit=crop&w=900&q=80', caption: 'Hub disruptions and route risk control' },
-  { type: 'Banking Group', image: 'https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&w=900&q=80', caption: 'Branch incident and fraud risk oversight' },
-  { type: 'Insurance Provider', image: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=900&q=80', caption: 'Claims integrity and liability reduction' },
-  { type: 'Telecom Provider', image: 'https://images.unsplash.com/photo-1584277261846-c6a1672ed979?auto=format&fit=crop&w=900&q=80', caption: 'Network outage management and response' },
-  { type: 'Airport Authority', image: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=900&q=80', caption: 'Terminal ops, safety cases and dispatch' },
+  { type: 'City', image: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1400&q=85', caption: 'US city command and citizen intake operations' },
+  { type: 'County Government', image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1400&q=85', caption: 'County-level multi-agency coordination' },
+  { type: 'Hospital Network', image: 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=1400&q=85', caption: 'Clinical safety, compliance and incident review' },
+  { type: 'School District', image: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1400&q=85', caption: 'Campus welfare and parent transparency channel' },
+  { type: 'University', image: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=1400&q=85', caption: 'Academic integrity and governance workflows' },
+  { type: 'Transit Agency', image: 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=1400&q=85', caption: 'Route reliability and disruption response center' },
+  { type: 'Police Department', image: 'https://images.unsplash.com/photo-1593010533077-22f31338c3f8?auto=format&fit=crop&w=1400&q=85', caption: 'Public safety response and evidence workflow' },
+  { type: 'Fire Department', image: 'https://images.unsplash.com/photo-1569428034239-f9565e32e224?auto=format&fit=crop&w=1400&q=85', caption: 'Emergency dispatch and station readiness' },
+  { type: 'Housing Authority', image: 'https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=1400&q=85', caption: 'Tenant safety and structural risk management' },
+  { type: 'Utilities Provider', image: 'https://images.unsplash.com/photo-1513828583688-c52646db42da?auto=format&fit=crop&w=1400&q=85', caption: 'Outage restoration and infrastructure oversight' },
+  { type: 'Retail Chain', image: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=1400&q=85', caption: 'Store safety, loss prevention and operations' },
+  { type: 'Logistics Company', image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1400&q=85', caption: 'Hub disruptions and route risk control' },
+  { type: 'Banking Group', image: 'https://images.unsplash.com/photo-1601597111158-2fceff292cdc?auto=format&fit=crop&w=1400&q=85', caption: 'Branch incident and fraud risk oversight' },
+  { type: 'Insurance Provider', image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1400&q=85', caption: 'Claims integrity and liability reduction' },
+  { type: 'Telecom Provider', image: 'https://images.unsplash.com/photo-1518709268805-4e9042af2176?auto=format&fit=crop&w=1400&q=85', caption: 'Network outage management and response' },
+  { type: 'Airport Authority', image: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1400&q=85', caption: 'Terminal ops, safety cases and dispatch' },
 ];
 
 const CATEGORY_INFO_NEEDS: Record<EntityType, Array<{ label: string; value: string; note: string }>> = {
