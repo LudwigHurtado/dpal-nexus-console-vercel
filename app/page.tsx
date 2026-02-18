@@ -336,6 +336,105 @@ const CATEGORY_SHOWCASE: Array<{ type: EntityType; image: string; caption: strin
   { type: 'Airport Authority', image: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=900&q=80', caption: 'Terminal ops, safety cases and dispatch' },
 ];
 
+const CATEGORY_INFO_NEEDS: Record<EntityType, Array<{ label: string; value: string; note: string }>> = {
+  City: [
+    { label: '311 Intake Volume', value: '12,420 / week', note: 'By district, hour, and issue type' },
+    { label: 'Critical Infrastructure Alerts', value: '39 active', note: 'Road, drainage, lighting, public safety zones' },
+    { label: 'Department SLA by Team', value: '87% avg', note: 'Public works, sanitation, transport, legal follow-up' },
+    { label: 'Citizen Sentiment', value: '+16% this quarter', note: 'Complaint-to-resolution satisfaction trend' },
+  ],
+  'County Government': [
+    { label: 'Cross-Agency Handoff Time', value: '5.6h median', note: 'County ops → utility → emergency services' },
+    { label: 'Permit/Compliance Backlog', value: '1,104 cases', note: 'Inspection and approval queue health' },
+    { label: 'Storm/Flood Readiness Index', value: '78/100', note: 'Drainage, shelter, emergency staffing readiness' },
+    { label: 'Constituent Escalation Rate', value: '8.2%', note: 'Cases requiring supervisor intervention' },
+  ],
+  'Hospital Network': [
+    { label: 'Patient Safety Events', value: '64 open', note: 'Near misses, adverse events, rapid response triggers' },
+    { label: 'Clinical Compliance Status', value: '92% complete', note: 'Sterilization, medication, protocol adherence' },
+    { label: 'ER Flow Pressure', value: 'High 14:00-20:00', note: 'Wait-time and triage bottleneck windows' },
+    { label: 'Medico-Legal Exposure', value: '12 high-risk files', note: 'Cases requiring legal/compliance review' },
+  ],
+  'School District': [
+    { label: 'Student Safety Incidents', value: '219 this month', note: 'Bullying, fights, facility hazards' },
+    { label: 'Counselor Intervention Queue', value: '23 pending', note: 'Priority by vulnerability score and urgency' },
+    { label: 'Parent Communication SLA', value: '94%', note: 'Response time to family-reported incidents' },
+    { label: 'Campus Risk Heatmap', value: '3 red campuses', note: 'Recurring incident concentration by site' },
+  ],
+  University: [
+    { label: 'Academic Integrity Cases', value: '35 active', note: 'Plagiarism, misconduct, policy violations' },
+    { label: 'Campus Security Alerts', value: '11 open', note: 'Safety and operational incident feed' },
+    { label: 'Department Compliance Score', value: '84/100', note: 'Policy training and closure performance' },
+    { label: 'Governance Action Backlog', value: '52 items', note: 'Committee and administrative follow-ups' },
+  ],
+  'Transit Agency': [
+    { label: 'Route Disruptions', value: '79 this week', note: 'Delay causes by corridor and time band' },
+    { label: 'Mean Time to Recovery', value: '1.8h', note: 'Incident detection to service normalization' },
+    { label: 'Station Safety Signals', value: '27 alerts', note: 'Crowding, hazard, equipment incidents' },
+    { label: 'Fleet Maintenance Risk', value: '44 overdue', note: 'Vehicles crossing maintenance thresholds' },
+  ],
+  'Police Department': [
+    { label: 'Response Time to Priority Calls', value: '7m 40s', note: 'P1/P2 dispatch performance by precinct' },
+    { label: 'Open Investigations', value: '412', note: 'Case load by detective unit and severity' },
+    { label: 'Evidence Chain Integrity', value: '99.1%', note: 'Tamper-proof custody and verification status' },
+    { label: 'Community Incident Hotspots', value: '14 zones', note: 'Repeat-location intelligence overlay' },
+  ],
+  'Fire Department': [
+    { label: 'Dispatch-to-Arrival Time', value: '6m 05s', note: 'By station and emergency class' },
+    { label: 'Hydrant/Equipment Readiness', value: '96%', note: 'Inspection and availability compliance' },
+    { label: 'High-Risk Property Watchlist', value: '58 sites', note: 'Frequent incidents / code risk' },
+    { label: 'Post-Incident Actions', value: '183 pending', note: 'Inspection, legal report, prevention outreach' },
+  ],
+  'Housing Authority': [
+    { label: 'Urgent Tenant Safety Cases', value: '43 open', note: 'Structural, utility, sanitation, personal safety' },
+    { label: 'Property Compliance Index', value: '81/100', note: 'Inspections and landlord corrective actions' },
+    { label: 'Legal Exposure Cases', value: '12 high', note: 'Potential liability due to delayed resolution' },
+    { label: 'Inspection Backlog', value: '67 units', note: 'Pending site visits and re-checks' },
+  ],
+  'Utilities Provider': [
+    { label: 'Active Outages', value: '21', note: 'Power/water/gas by service zone' },
+    { label: 'Customers Impacted', value: '14,102', note: 'Current affected accounts and vulnerability tier' },
+    { label: 'Restoration ETA Accuracy', value: '87%', note: 'Predicted vs actual service restoration time' },
+    { label: 'Regulatory Incident Queue', value: '8 open', note: 'Compliance reporting obligations' },
+  ],
+  'Retail Chain': [
+    { label: 'Store Safety Incidents', value: '438', note: 'Slip/fall, security, operational hazards' },
+    { label: 'Loss Prevention Flags', value: '126', note: 'Shrinkage patterns and repeat offenders' },
+    { label: 'Store Ops SLA', value: '93%', note: 'Time-to-mitigate high-risk incidents' },
+    { label: 'Insurance Claim Exposure', value: '$1.2M potential', note: 'Open risk cases by region' },
+  ],
+  'Logistics Company': [
+    { label: 'Hub Disruptions', value: '217', note: 'Sortation, loading, and routing blockers' },
+    { label: 'Driver Safety Events', value: '88', note: 'Fatigue, route hazards, near-miss telemetry' },
+    { label: 'On-Time Recovery Rate', value: '89%', note: 'Delayed shipment recapture performance' },
+    { label: 'Claims Liability Queue', value: '64 cases', note: 'Damaged/lost shipment legal follow-up' },
+  ],
+  'Banking Group': [
+    { label: 'Branch Incident Feed', value: '72 open', note: 'Security, fraud, service continuity risks' },
+    { label: 'Fraud Escalations', value: '31 high-priority', note: 'Transaction anomalies and account compromise' },
+    { label: 'Compliance Breach Risk', value: 'Low-Moderate', note: 'Audit controls and policy adherence' },
+    { label: 'Customer Impact Window', value: '2.4h avg', note: 'Mean disruption duration for incidents' },
+  ],
+  'Insurance Provider': [
+    { label: 'Claims Integrity Alerts', value: '93', note: 'Potential fraud / missing evidence markers' },
+    { label: 'High-Exposure Claims', value: '27', note: 'Large-loss and legal-sensitive cases' },
+    { label: 'Adjuster Workload Balance', value: '74% optimal', note: 'Case distribution efficiency index' },
+    { label: 'Settlement Cycle Time', value: '11.2 days', note: 'Average decision-to-settlement interval' },
+  ],
+  'Telecom Provider': [
+    { label: 'Network Outage Clusters', value: '19', note: 'Tower/fiber incidents by metro zone' },
+    { label: 'SLA Breach Risk', value: '7 enterprise links', note: 'Contracts at risk of penalties' },
+    { label: 'Field Crew Dispatch Load', value: '83 active tasks', note: 'Technician queue and route efficiency' },
+    { label: 'Customer Complaint Surge', value: '+12%', note: 'QoS degradation detection trend' },
+  ],
+  'Airport Authority': [
+    { label: 'Terminal Incident Queue', value: '54', note: 'Safety, crowding, ops disruption events' },
+    { label: 'Runway/Apron Readiness', value: '97%', note: 'Operational safety checks and closures' },
+    { label: 'Ground Ops Turnaround', value: '42m avg', note: 'Delay to recovery cycle' },
+    { label: 'Regulatory Audit Flags', value: '6 pending', note: 'Compliance actions and due dates' },
+  ],
+};
+
 export default function EnhancedNexusPrototype() {
   const [selectedType, setSelectedType] = useState<EntityType | 'All'>('All');
   const [selectedEntityId, setSelectedEntityId] = useState(ENTITIES[0].id);
@@ -439,6 +538,7 @@ export default function EnhancedNexusPrototype() {
 
   const openArea = (area: ActionArea) => setActiveArea(area);
   const profile = uniqueByType[selectedEntity.type];
+  const infoNeeds = CATEGORY_INFO_NEEDS[selectedEntity.type] || [];
 
   const renderEntityLayout = () => {
     if (profile.layout === 'city') {
@@ -584,6 +684,22 @@ export default function EnhancedNexusPrototype() {
               <div style={styles.kpiDelta}>{kpi.delta}</div>
             </div>
           ))}
+        </section>
+
+        <section style={styles.infoNeedsCard}>
+          <h3 style={styles.cardTitle}>Category Intelligence Requirements ({selectedEntity.type})</h3>
+          <p style={{ ...styles.subtitle, marginBottom: 10 }}>
+            These are the key information elements this category should track to operate the full DPAL workflow.
+          </p>
+          <div style={styles.infoNeedsGrid}>
+            {infoNeeds.map((item) => (
+              <div key={item.label} style={styles.infoNeedItem}>
+                <div style={{ color: '#93c5fd', fontSize: 12, fontWeight: 700 }}>{item.label}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, marginTop: 6 }}>{item.value}</div>
+                <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 6 }}>{item.note}</div>
+              </div>
+            ))}
+          </div>
         </section>
 
         {renderEntityLayout()}
@@ -738,6 +854,9 @@ const styles: Record<string, React.CSSProperties> = {
   kpiLabel: { color: '#94a3b8', fontSize: 12 },
   kpiValue: { fontSize: 28, fontWeight: 800, marginTop: 6 },
   kpiDelta: { color: '#86efac', fontSize: 12, marginTop: 6 },
+  infoNeedsCard: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)' },
+  infoNeedsGrid: { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' },
+  infoNeedItem: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: '#0f172a' },
   uniqueLayoutCard: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)' },
   uniqueGrid3: { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))' },
   uniqueGrid2: { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' },
