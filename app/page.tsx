@@ -478,24 +478,7 @@ const CATEGORY_ICONS: Record<EntityType, string> = {
   'Airport Authority': '✈️',
 };
 
-const CATEGORY_REMOTE_IMAGES: Record<EntityType, string> = {
-  City: 'https://source.unsplash.com/1200x600/?city,skyline,government',
-  'County Government': 'https://source.unsplash.com/1200x600/?county,administration,public',
-  'Hospital Network': 'https://source.unsplash.com/1200x600/?hospital,medical,healthcare',
-  'School District': 'https://source.unsplash.com/1200x600/?school,classroom,education',
-  University: 'https://source.unsplash.com/1200x600/?university,campus,education',
-  'Transit Agency': 'https://source.unsplash.com/1200x600/?public,transport,metro',
-  'Police Department': 'https://source.unsplash.com/1200x600/?police,patrol,public-safety',
-  'Fire Department': 'https://source.unsplash.com/1200x600/?firefighter,fire-station,emergency',
-  'Housing Authority': 'https://source.unsplash.com/1200x600/?housing,apartment,community',
-  'Utilities Provider': 'https://source.unsplash.com/1200x600/?utilities,power-grid,infrastructure',
-  'Retail Chain': 'https://source.unsplash.com/1200x600/?retail,store,shopping',
-  'Logistics Company': 'https://source.unsplash.com/1200x600/?logistics,warehouse,delivery',
-  'Banking Group': 'https://source.unsplash.com/1200x600/?banking,finance,office',
-  'Insurance Provider': 'https://source.unsplash.com/1200x600/?insurance,documents,business',
-  'Telecom Provider': 'https://source.unsplash.com/1200x600/?telecom,network,tower',
-  'Airport Authority': 'https://source.unsplash.com/1200x600/?airport,terminal,aviation',
-};
+// Using curated CATEGORY_SHOWCASE images first; fallback generator below keeps UI stable.
 
 function categoryFallbackImage(type: EntityType): string {
   const icon = CATEGORY_ICONS[type] || '🧩';
@@ -517,7 +500,7 @@ function categoryFallbackImage(type: EntityType): string {
 }
 
 function categoryImageForType(type: EntityType): string {
-  return CATEGORY_REMOTE_IMAGES[type] || categoryFallbackImage(type);
+  return CATEGORY_SHOWCASE.find((c) => c.type === type)?.image || categoryFallbackImage(type);
 }
 
 const CATEGORY_INTAKE_FIELDS: Record<EntityType, IntakeField[]> = {
