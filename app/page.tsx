@@ -77,7 +77,7 @@ const ACTION_AREAS: Array<{ key: ActionArea; label: string }> = [
   { key: 'audit', label: 'Audit Trail' },
 ];
 
-const DPAL_API_BASE = (process.env.NEXT_PUBLIC_DPAL_API_BASE || '').trim();
+const defaultApiBase = (process.env.NEXT_PUBLIC_DPAL_API_BASE || '').trim();
 
 const ENTITIES: Entity[] = [
   {
@@ -527,7 +527,9 @@ export default function EnhancedNexusPrototype() {
   const [activeArea, setActiveArea] = useState<ActionArea>('reports');
   const [reportsByEntity, setReportsByEntity] = useState<Record<string, Report[]>>(Object.fromEntries(ENTITIES.map((e) => [e.id, e.reports])));
   const [selectedReportId, setSelectedReportId] = useState<string>(ENTITIES[0].reports[0].id);
-  const [syncMessage, setSyncMessage] = useState<string>(DPAL_API_BASE ? 'Connected to DPAL API' : 'Using demo data (set NEXT_PUBLIC_DPAL_API_BASE)');
+  const [apiBaseInput, setApiBaseInput] = useState<string>(defaultApiBase);
+  const apiBase = apiBaseInput.trim();
+  const [syncMessage, setSyncMessage] = useState<string>(apiBase ? 'Connected to DPAL API' : 'Using demo data (set NEXT_PUBLIC_DPAL_API_BASE)');
   const [isSyncing, setIsSyncing] = useState(false);
   const [assignedTo, setAssignedTo] = useState('');
   const [actionNote, setActionNote] = useState('');
@@ -539,6 +541,11 @@ export default function EnhancedNexusPrototype() {
   const [executiveBriefLoading, setExecutiveBriefLoading] = useState(false);
   const [agentBusy, setAgentBusy] = useState(false);
   const [agentLog, setAgentLog] = useState<string[]>([]);
+  const [newItemTitle, setNewItemTitle] = useState('');
+  const [newItemSummary, setNewItemSummary] = useState('');
+  const [newItemSeverity, setNewItemSeverity] = useState<Severity>('Moderate');
+  const [newItemChannel, setNewItemChannel] = useState<Report['channel']>('App');
+  const [newItemLocation, setNewItemLocation] = useState('');
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(ENTITIES.map((e) => e.type)))] as const, []);
   const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
@@ -594,7 +601,7 @@ export default function EnhancedNexusPrototype() {
   }, [reportsByEntity, auditEntries]);
 
   useEffect(() => {
-    if (!DPAL_API_BASE) return;
+    if (!apiBase) return;
 
     const fetchLiveReports = async () => {
       try {
@@ -607,7 +614,7 @@ export default function EnhancedNexusPrototype() {
           entityName: selectedEntity.name,
         });
 
-        const response = await fetch(`${DPAL_API_BASE}/api/reports/feed?${params.toString()}`);
+        const response = await fetch(`${apiBase}/api/reports/feed?${params.toString()}`);
         if (!response.ok) throw new Error(`feed_http_${response.status}`);
 
         const json = await response.json();
@@ -659,9 +666,9 @@ export default function EnhancedNexusPrototype() {
       ),
     }));
 
-    if (DPAL_API_BASE) {
+    if (apiBase) {
       try {
-        const response = await fetch(`${DPAL_API_BASE}/api/reports/${encodeURIComponent(reportId)}/ops-status`, {
+        const response = await fetch(`${apiBase}/api/reports/${encodeURIComponent(reportId)}/ops-status`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: next, note }),
@@ -677,6 +684,80 @@ export default function EnhancedNexusPrototype() {
     logAction(`${reportId} changed to ${next}${assignee ? ` (assigned: ${assignee})` : ''}`);
     setActionNote('');
     setActiveArea('audit');
+  };
+
+  const createNewItem = async () => {
+    if (!newItemTitle.trim()) return;
+
+    const reportId = `NEX-${Date.now().toString().slice(-8)}`;
+    const localItem: Report = {
+      id: reportId,
+      title: newItemTitle.trim(),
+      summary: newItemSummary.trim() || 'No summary provided.',
+      severity: newItemSeverity,
+      status: 'New',
+      location: newItemLocation.trim() || selectedEntity.region,
+      eta: 'TBD',
+      channel: newItemChannel,
+    };
+
+    setReportsByEntity((prev) => ({ ...prev, [selectedEntity.id]: [localItem, ...(prev[selectedEntity.id] || [])] }));
+    setSelectedReportId(reportId);
+
+    if (apiBase) {
+      try {
+        const res = await fetch(`${apiBase}/api/reports/anchor`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reportId,
+            title: localItem.title,
+            description: localItem.summary,
+            category: selectedEntity.type,
+            location: localItem.location,
+            severity: localItem.severity,
+            channel: localItem.channel,
+            entityType: selectedEntity.type,
+            entityName: selectedEntity.name,
+            opsStatus: 'New',
+            structuredData: { source: 'nexus_console' },
+          }),
+        });
+        if (!res.ok) throw new Error(`anchor_http_${res.status}`);
+        setSyncMessage(`New item created and saved to DPAL DB: ${reportId}`);
+      } catch (error) {
+        console.error(error);
+        setSyncMessage(`Item created locally, API save failed for ${reportId}`);
+      }
+    }
+
+    logAction(`Created new item ${reportId}`);
+    setNewItemTitle('');
+    setNewItemSummary('');
+    setNewItemLocation('');
+    setNewItemSeverity('Moderate');
+    setNewItemChannel('App');
+  };
+
+  const testIntegration = async () => {
+    if (!apiBase) {
+      setSyncMessage('Set API base URL first.');
+      return;
+    }
+    try {
+      setIsSyncing(true);
+      const healthRes = await fetch(`${apiBase}/health`);
+      const reportsRes = await fetch(`${apiBase}/api/reports/feed?limit=1`);
+      if (!healthRes.ok || !reportsRes.ok) throw new Error(`health:${healthRes.status} reports:${reportsRes.status}`);
+      setSyncMessage('Railway/Mongo integration OK: health + reports feed reachable.');
+      logAction('Integration check passed');
+    } catch (error) {
+      console.error(error);
+      setSyncMessage('Integration check failed. Verify Railway URL, CORS, and Mongo connectivity.');
+      logAction('Integration check failed');
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const openArea = (area: ActionArea) => {
@@ -761,7 +842,7 @@ export default function EnhancedNexusPrototype() {
         `Recommended action: prioritize high-severity and repeat-location cases, maintain SLA discipline, and run daily review with assigned owners.`,
       ].join('\n');
 
-      if (!DPAL_API_BASE) {
+      if (!apiBase) {
         setExecutiveBrief(fallback);
         logAction('Executive brief generated (local template)');
         return;
@@ -769,7 +850,7 @@ export default function EnhancedNexusPrototype() {
 
       const prompt = `Create a concise executive operations brief (6-8 lines) for ${selectedEntity.name} (${selectedEntity.type}). Include current risk level, queue snapshot, high-priority issue, recommended actions, and accountability note. Data: ${JSON.stringify({ reports: currentReports.slice(0, 10), kpis: selectedEntity.kpis, valueStats: selectedEntity.valueStats })}`;
 
-      const res = await fetch(`${DPAL_API_BASE}/api/ai/ask`, {
+      const res = await fetch(`${apiBase}/api/ai/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, tier: 'cheap' }),
@@ -792,12 +873,12 @@ export default function EnhancedNexusPrototype() {
   const runAiForReport = async (report: Report) => {
     setAiLoadingFor(report.id);
     try {
-      if (!DPAL_API_BASE) {
+      if (!apiBase) {
         setAiByReportId((prev) => ({ ...prev, [report.id]: localAiInsight(report) }));
         return;
       }
 
-      const triageRes = await fetch(`${DPAL_API_BASE}/api/ai/triage`, {
+      const triageRes = await fetch(`${apiBase}/api/ai/triage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -811,7 +892,7 @@ export default function EnhancedNexusPrototype() {
       if (!triageRes.ok) throw new Error(`triage_http_${triageRes.status}`);
       const triageJson = await triageRes.json();
 
-      const similarRes = await fetch(`${DPAL_API_BASE}/api/ai/similar-cases`, {
+      const similarRes = await fetch(`${apiBase}/api/ai/similar-cases`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1130,17 +1211,22 @@ export default function EnhancedNexusPrototype() {
         </section>
 
         <section style={styles.railwayCard}>
-          <div>
-            <div style={styles.panelLabel}>Railway Deployment Readiness</div>
-            <div style={{ color: '#cbd5e1', marginTop: 4 }}>UI is now wired for live DPAL report sync + action persistence.</div>
+          <div style={{ flex: 1, minWidth: 280 }}>
+            <div style={styles.panelLabel}>Railway + Mongo Integration</div>
+            <div style={{ color: '#cbd5e1', marginTop: 4 }}>Set API base, test connection, and persist actions/items to DPAL backend.</div>
             <div style={{ color: '#94a3b8', marginTop: 4, fontSize: 12 }}>
               {isSyncing ? 'Sync in progress...' : syncMessage}
             </div>
+            <div style={styles.formGrid}>
+              <input value={apiBaseInput} onChange={(e) => setApiBaseInput(e.target.value)} placeholder="https://your-railway-api.up.railway.app" style={styles.input} />
+              <button style={styles.smallBtn} onClick={() => void testIntegration()}>Test Integration</button>
+            </div>
           </div>
           <div style={styles.channelWrap}>
+            <span style={styles.channelChip}>/health</span>
             <span style={styles.channelChip}>/api/reports/feed</span>
+            <span style={styles.channelChip}>/api/reports/anchor</span>
             <span style={styles.channelChip}>/api/reports/:id/ops-status</span>
-            <span style={styles.channelChip}>NEXT_PUBLIC_DPAL_API_BASE</span>
           </div>
         </section>
 
@@ -1149,6 +1235,25 @@ export default function EnhancedNexusPrototype() {
             {activeArea === 'reports' && (
               <>
                 <h3 style={styles.cardTitle}>Reports Queue</h3>
+
+                <div style={styles.createCard}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Create New Item</div>
+                  <div style={styles.formGrid}>
+                    <input value={newItemTitle} onChange={(e) => setNewItemTitle(e.target.value)} placeholder="Report title" style={styles.input} />
+                    <input value={newItemLocation} onChange={(e) => setNewItemLocation(e.target.value)} placeholder="Location / zone" style={styles.input} />
+                    <select value={newItemSeverity} onChange={(e) => setNewItemSeverity(e.target.value as Severity)} style={styles.input}>
+                      <option>Low</option><option>Moderate</option><option>High</option>
+                    </select>
+                    <select value={newItemChannel} onChange={(e) => setNewItemChannel(e.target.value as Report['channel'])} style={styles.input}>
+                      <option>App</option><option>WhatsApp</option><option>Web Portal</option><option>Hotline</option><option>Field Team</option>
+                    </select>
+                  </div>
+                  <input value={newItemSummary} onChange={(e) => setNewItemSummary(e.target.value)} placeholder="Summary / notes" style={{ ...styles.input, width: '100%', marginTop: 8 }} />
+                  <div style={styles.actionButtons}>
+                    <button style={styles.smallBtnPrimary} onClick={() => void createNewItem()}>Create & Save</button>
+                  </div>
+                </div>
+
                 <div style={styles.valueRow}>
                   <span>Total: {counts.total}</span>
                   <span>New: {counts.byStatus.New}</span>
@@ -1408,6 +1513,7 @@ const styles: Record<string, React.CSSProperties> = {
   twoCol: { display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 12 },
   card: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)' },
   cardTitle: { marginTop: 0, marginBottom: 10 },
+  createCard: { border: '1px dashed #334155', borderRadius: 10, padding: 10, marginBottom: 10, background: 'rgba(15,23,42,0.5)' },
   valueRow: { display: 'flex', gap: 12, flexWrap: 'wrap', color: '#cbd5e1', fontSize: 13 },
   reportRow: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: '#0f172a', display: 'grid', gap: 8, textAlign: 'left', color: '#e2e8f0' },
   reportSelectBtn: { border: 'none', background: 'transparent', color: '#e2e8f0', textAlign: 'left', padding: 0, cursor: 'pointer' },
@@ -1430,3 +1536,4 @@ const styles: Record<string, React.CSSProperties> = {
   valueStat: { border: '1px solid #334155', borderRadius: 10, padding: '9px 10px', display: 'flex', justifyContent: 'space-between', gap: 10, color: '#cbd5e1', background: '#0f172a', marginBottom: 8 },
   auditList: { margin: 0, paddingLeft: 18, color: '#cbd5e1', lineHeight: 1.8 },
 };
+
