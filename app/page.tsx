@@ -324,6 +324,7 @@ export default function NexusMasterDashboard() {
                     <Card title="Open Alerts" text={`${selectedEntity.alerts}`} />
                   </div>
                   <EntityDashboardTemplate entity={selectedEntity} />
+                  <AgencyReadingsMock entity={selectedEntity} />
                   <EntityRiskLiabilityPanel entity={selectedEntity} />
                 </>
               )}
@@ -470,6 +471,81 @@ function EntityShowcaseHero({ entity }: { entity: Entity }) {
       <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8, color: hero.accent, fontWeight: 800 }}>Signature Showcase Element</div>
       <div style={{ fontSize: 24, fontWeight: 900, marginTop: 6 }}>{hero.title}</div>
       <div style={{ color: '#cbd5e1', marginTop: 4 }}>{hero.subtitle}</div>
+    </div>
+  );
+}
+
+function AgencyReadingsMock({ entity }: { entity: Entity }) {
+  const byType: Record<EntityType, Array<{ label: string; value: string }>> = {
+    City: [
+      { label: 'Open Work Orders', value: '1,248' },
+      { label: 'District Hotspots', value: '17' },
+      { label: 'Avg Field Response', value: '2.6h' },
+      { label: 'Code Enforcement Backlog', value: '83' },
+      { label: 'Public Safety Escalations', value: '24' },
+      { label: 'Budget Risk Flags', value: '6' },
+    ],
+    'School District': [
+      { label: 'Student Safety Cases', value: '213' },
+      { label: 'Bullying Reports (30d)', value: '74' },
+      { label: 'Staff Conduct Reviews', value: '12' },
+      { label: 'Campus Facilities Hazards', value: '39' },
+      { label: 'Counselor Intervention Queue', value: '28' },
+      { label: 'Compliance Violations', value: '9' },
+    ],
+    University: [
+      { label: 'Academic Integrity Cases', value: '41' },
+      { label: 'Lab Safety Incidents', value: '13' },
+      { label: 'Campus Security Alerts', value: '18' },
+      { label: 'Governance Review Items', value: '22' },
+      { label: 'Resolution SLA Breaches', value: '7' },
+      { label: 'High-Risk Departments', value: '3' },
+    ],
+    'Transit Agency': [
+      { label: 'Route Disruption Events', value: '96' },
+      { label: 'Station Safety Alerts', value: '27' },
+      { label: 'Mean Time to Recovery', value: '1.9h' },
+      { label: 'Fleet Maintenance Overdue', value: '44' },
+      { label: 'Passenger Complaint Spike', value: '12%' },
+      { label: 'Critical Escalations', value: '11' },
+    ],
+    'Housing Authority': [
+      { label: 'Structural Hazard Cases', value: '67' },
+      { label: 'Urgent Tenant Safety Cases', value: '31' },
+      { label: 'Landlord Non-Compliance', value: '22' },
+      { label: 'Mold/Water Risk Signals', value: '48' },
+      { label: 'Legal Exposure Cases', value: '15' },
+      { label: 'SLA Breach Risk', value: 'High' },
+    ],
+    'Utilities Provider': [
+      { label: 'Active Outages', value: '29' },
+      { label: 'Customers Impacted', value: '18,430' },
+      { label: 'Restoration ETA Accuracy', value: '86%' },
+      { label: 'Grid Risk Nodes', value: '14' },
+      { label: 'Regulatory Incident Flags', value: '8' },
+      { label: 'Critical Infrastructure Alerts', value: '5' },
+    ],
+    Custom: [
+      { label: 'Open Cases', value: '120' },
+      { label: 'Critical Alerts', value: '14' },
+      { label: 'SLA Compliance', value: '84%' },
+      { label: 'Verification Backlog', value: '33' },
+      { label: 'Liability Risk Index', value: 'Moderate' },
+      { label: 'Operational Readiness', value: '78%' },
+    ],
+  };
+
+  const readings = byType[entity.type];
+
+  return (
+    <div style={{ ...card, marginTop: 12 }}>
+      <h3 style={{ marginTop: 0 }}>Agency Readings Mock Display</h3>
+      <p style={{ marginTop: 0, color: '#94a3b8' }}>Live-style operational readings tailored to {entity.type} entities.</p>
+      <div className="grid" style={{ marginTop: 8 }}>
+        {readings.map((r) => (
+          <Card key={r.label} title={r.label} text={r.value} />
+        ))}
+      </div>
     </div>
   );
 }
