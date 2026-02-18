@@ -687,6 +687,11 @@ export default function EnhancedNexusPrototype() {
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
   const [voiceTarget, setVoiceTarget] = useState<'actionNote' | 'newSummary'>('actionNote');
+  const [auditWorkTitle, setAuditWorkTitle] = useState('');
+  const [auditWorkAssignee, setAuditWorkAssignee] = useState('');
+  const [personOfInterest, setPersonOfInterest] = useState('');
+  const [auditWorkItems, setAuditWorkItems] = useState<Array<{ id: string; title: string; assignee: string; status: 'Open' | 'In Review' | 'Closed' }>>([]);
+  const [poiItems, setPoiItems] = useState<Array<{ id: string; name: string; risk: 'Low' | 'Moderate' | 'High'; note: string }>>([]);
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(ENTITIES.map((e) => e.type)))] as const, []);
   const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
@@ -1134,6 +1139,41 @@ export default function EnhancedNexusPrototype() {
 
     setInteractionMessage(`Duplicate scan complete for ${report.id}: possible 2 related reports found (mock).`);
     logAction(`Duplicate scan run for ${report.id}`);
+  };
+
+  const issueAuditWork = () => {
+    if (!auditWorkTitle.trim()) return;
+    const item = {
+      id: `AUD-${Date.now().toString().slice(-6)}`,
+      title: auditWorkTitle.trim(),
+      assignee: auditWorkAssignee.trim() || 'Audit Team',
+      status: 'Open' as const,
+    };
+    setAuditWorkItems((prev) => [item, ...prev].slice(0, 30));
+    setAuditWorkTitle('');
+    setAuditWorkAssignee('');
+    setInteractionMessage(`Audit work issued: ${item.id} assigned to ${item.assignee}.`);
+    logAction(`Issued audit work ${item.id}`);
+  };
+
+  const addPersonOfInterest = () => {
+    if (!personOfInterest.trim()) return;
+    const risk: 'Low' | 'Moderate' | 'High' = selectedReport?.severity === 'High' ? 'High' : 'Moderate';
+    const item = {
+      id: `POI-${Date.now().toString().slice(-6)}`,
+      name: personOfInterest.trim(),
+      risk,
+      note: `Linked to ${selectedEntity.type} case flow.`,
+    };
+    setPoiItems((prev) => [item, ...prev].slice(0, 30));
+    setPersonOfInterest('');
+    setInteractionMessage(`Person of interest added: ${item.name} (${item.risk}).`);
+    logAction(`Added person of interest ${item.id}`);
+  };
+
+  const setAuditWorkStatus = (id: string, status: 'Open' | 'In Review' | 'Closed') => {
+    setAuditWorkItems((prev) => prev.map((w) => (w.id === id ? { ...w, status } : w)));
+    logAction(`Audit work ${id} moved to ${status}`);
   };
 
   const profile = uniqueByType[selectedEntity.type];
@@ -1793,14 +1833,74 @@ export default function EnhancedNexusPrototype() {
 
             {activeArea === 'audit' && (
               <>
-                <h3 style={styles.cardTitle}>Audit Trail</h3>
-                {auditEntries.length ? (
-                  <ul style={styles.auditList}>
-                    {auditEntries.map((entry) => <li key={entry}>{entry}</li>)}
-                  </ul>
-                ) : (
-                  <p style={styles.subtitle}>No actions yet. Use buttons in Reports/Dispatch and events will appear here.</p>
-                )}
+                <h3 style={styles.cardTitle}>Audit, Work Issuance & People-of-Interest</h3>
+
+                <div style={styles.auditOpsGrid}>
+                  <div style={styles.createCard}>
+                    <div style={{ fontWeight: 700, marginBottom: 6 }}>Issue Audit Work</div>
+                    <div style={styles.formGrid}>
+                      <input value={auditWorkTitle} onChange={(e) => setAuditWorkTitle(e.target.value)} placeholder="Audit task title" style={styles.input} />
+                      <input value={auditWorkAssignee} onChange={(e) => setAuditWorkAssignee(e.target.value)} placeholder="Assign to" style={styles.input} />
+                    </div>
+                    <div style={styles.actionButtons}>
+                      <button style={styles.smallBtnPrimary} onClick={issueAuditWork}>Issue Work</button>
+                    </div>
+                  </div>
+
+                  <div style={styles.createCard}>
+                    <div style={{ fontWeight: 700, marginBottom: 6 }}>People of Interest Analysis</div>
+                    <div style={styles.formGrid}>
+                      <input value={personOfInterest} onChange={(e) => setPersonOfInterest(e.target.value)} placeholder="Name / entity token" style={styles.input} />
+                    </div>
+                    <div style={styles.actionButtons}>
+                      <button style={styles.smallBtnPrimary} onClick={addPersonOfInterest}>Add POI</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={styles.auditOpsGrid}>
+                  <div style={styles.createCard}>
+                    <div style={{ fontWeight: 700, marginBottom: 6 }}>Audit Work Queue</div>
+                    {auditWorkItems.length ? (
+                      <div style={{ display: 'grid', gap: 8 }}>
+                        {auditWorkItems.map((w) => (
+                          <div key={w.id} style={styles.endpointItem}>
+                            <span>{w.id} • {w.title} • {w.assignee}</span>
+                            <div style={styles.referRow}>
+                              <button style={styles.referBtn} onClick={() => setAuditWorkStatus(w.id, 'Open')}>Open</button>
+                              <button style={styles.referBtn} onClick={() => setAuditWorkStatus(w.id, 'In Review')}>In Review</button>
+                              <button style={styles.referBtnPrimary} onClick={() => setAuditWorkStatus(w.id, 'Closed')}>Closed</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={styles.subtitle}>No audit work issued yet.</p>
+                    )}
+                  </div>
+
+                  <div style={styles.createCard}>
+                    <div style={{ fontWeight: 700, marginBottom: 6 }}>POI Register (Mock)</div>
+                    {poiItems.length ? (
+                      <ul style={styles.auditList}>
+                        {poiItems.map((p) => <li key={p.id}>{p.id} • {p.name} • Risk: {p.risk} • {p.note}</li>)}
+                      </ul>
+                    ) : (
+                      <p style={styles.subtitle}>No people/entities of interest added yet.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div style={styles.createCard}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Audit Trail</div>
+                  {auditEntries.length ? (
+                    <ul style={styles.auditList}>
+                      {auditEntries.map((entry) => <li key={entry}>{entry}</li>)}
+                    </ul>
+                  ) : (
+                    <p style={styles.subtitle}>No actions yet. Use buttons in Reports/Dispatch and events will appear here.</p>
+                  )}
+                </div>
               </>
             )}
           </div>
@@ -1992,6 +2092,7 @@ const styles: Record<string, React.CSSProperties> = {
   card: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)' },
   cardTitle: { marginTop: 0, marginBottom: 10 },
   createCard: { border: '1px dashed #334155', borderRadius: 10, padding: 10, marginBottom: 10, background: 'rgba(15,23,42,0.5)' },
+  auditOpsGrid: { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))' },
   valueRow: { display: 'flex', gap: 12, flexWrap: 'wrap', color: '#cbd5e1', fontSize: 13 },
   reportRow: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: '#0f172a', display: 'grid', gap: 8, textAlign: 'left', color: '#e2e8f0' },
   reportSelectBtn: { border: 'none', background: 'transparent', color: '#e2e8f0', textAlign: 'left', padding: 0, cursor: 'pointer' },
