@@ -13,6 +13,18 @@ type EntityType =
 
 type DashboardView = 'Executive' | 'Operations' | 'Risk & Liability' | 'Public Portal';
 type Status = 'Active' | 'Pilot' | 'Planning';
+type Severity = 'Low' | 'Moderate' | 'High';
+type ReportStatus = 'New' | 'Investigating' | 'Action Taken' | 'Resolved';
+
+type Report = {
+  id: string;
+  channel: 'App' | 'WhatsApp' | 'Web Portal' | 'Hotline' | 'Field Team';
+  title: string;
+  severity: Severity;
+  status: ReportStatus;
+  location: string;
+  eta: string;
+};
 
 type Entity = {
   id: string;
@@ -21,9 +33,10 @@ type Entity = {
   region: string;
   status: Status;
   confidence: number;
-  kpis: Array<{ label: string; value: string; delta?: string }>;
+  kpis: Array<{ label: string; value: string; delta: string }>;
+  valueStats: Array<{ label: string; value: string }>;
   modules: string[];
-  risks: Array<{ title: string; severity: 'Low' | 'Moderate' | 'High' }>;
+  reports: Report[];
 };
 
 const DASHBOARD_VIEWS: DashboardView[] = ['Executive', 'Operations', 'Risk & Liability', 'Public Portal'];
@@ -42,10 +55,16 @@ const ENTITIES: Entity[] = [
       { label: 'Avg Response', value: '2.3h', delta: '-0.4h' },
       { label: 'SLA', value: '91%', delta: '+2.1%' },
     ],
-    modules: ['District Heatmap', 'Critical Queue', 'Department Throughput', 'Escalation Timeline'],
-    risks: [
-      { title: 'Recurring incidents in southern corridor', severity: 'Moderate' },
-      { title: 'Delayed evidence closure for legal cases', severity: 'High' },
+    valueStats: [
+      { label: 'Budget Saved (est.)', value: '$128,000/mo' },
+      { label: 'Escalations Prevented', value: '143' },
+      { label: 'Citizen Satisfaction Lift', value: '+18%' },
+    ],
+    modules: ['District Heatmap', 'Critical Queue', 'Public Works Dispatch', 'Legal Readiness'],
+    reports: [
+      { id: 'RPT-1042', channel: 'WhatsApp', title: 'Streetlight outage and unsafe crossing', severity: 'Moderate', status: 'Investigating', location: 'Zona Sur - Calle 17', eta: '6h' },
+      { id: 'RPT-1049', channel: 'App', title: 'Drainage overflow near school entrance', severity: 'High', status: 'New', location: 'Sopocachi', eta: '2h' },
+      { id: 'RPT-1055', channel: 'Web Portal', title: 'Illegal dumping hotspot recurrence', severity: 'Moderate', status: 'Action Taken', location: 'Periférica', eta: 'Completed' },
     ],
   },
   {
@@ -61,10 +80,16 @@ const ENTITIES: Entity[] = [
       { label: 'Compliance Tasks', value: '118', delta: '-5.1%' },
       { label: 'SLA', value: '88%', delta: '+1.3%' },
     ],
-    modules: ['Facility Risk Matrix', 'Adverse Event Review', 'Clinical Compliance Board', 'Audit Trail'],
-    risks: [
-      { title: 'Unit-level backlog in compliance reviews', severity: 'Moderate' },
-      { title: 'High-priority case pending legal validation', severity: 'High' },
+    valueStats: [
+      { label: 'Avoided Adverse Events', value: '21 this quarter' },
+      { label: 'Audit Prep Time Saved', value: '46h/month' },
+      { label: 'Legal Risk Reduction', value: '-27%' },
+    ],
+    modules: ['Clinical Risk Matrix', 'Adverse Event Workflow', 'Quality Board', 'Audit Exports'],
+    reports: [
+      { id: 'MED-4002', channel: 'Field Team', title: 'Sterilization compliance deviation', severity: 'High', status: 'Investigating', location: 'Unit B - OR 3', eta: '1h' },
+      { id: 'MED-4011', channel: 'Web Portal', title: 'Medication near-miss report', severity: 'Moderate', status: 'Action Taken', location: 'Pharmacy Tower', eta: 'Completed' },
+      { id: 'MED-4014', channel: 'Hotline', title: 'ER triage delay complaint', severity: 'Moderate', status: 'New', location: 'Emergency Wing', eta: '3h' },
     ],
   },
   {
@@ -80,306 +105,225 @@ const ENTITIES: Entity[] = [
       { label: 'Parent Updates', value: '402', delta: '+15.2%' },
       { label: 'SLA', value: '93%', delta: '+1.8%' },
     ],
-    modules: ['Cross-Campus Tracker', 'Student Welfare Queue', 'Counselor Routing', 'Conduct Oversight'],
-    risks: [
-      { title: 'Bullying case concentration in 3 campuses', severity: 'Moderate' },
-      { title: 'Escalated conduct case awaiting board action', severity: 'High' },
+    valueStats: [
+      { label: 'Incidents Resolved <24h', value: '82%' },
+      { label: 'Repeat Cases Reduced', value: '-31%' },
+      { label: 'Counselor Time Optimized', value: '+22%' },
     ],
-  },
-  {
-    id: 'andes-university',
-    name: 'Andes State University',
-    type: 'University',
-    region: 'BO-LP',
-    status: 'Planning',
-    confidence: 81,
-    kpis: [
-      { label: 'Integrity Cases', value: '35', delta: '+6.3%' },
-      { label: 'Security Alerts', value: '11', delta: '-9.7%' },
-      { label: 'Policy Reviews', value: '52', delta: '+4.8%' },
-      { label: 'SLA', value: '86%', delta: '+0.9%' },
-    ],
-    modules: ['Governance Cockpit', 'Policy Traceability', 'Department Scorecards', 'Evidence Timeline'],
-    risks: [
-      { title: 'Fragmented reporting standards by faculty', severity: 'Moderate' },
-      { title: 'Incident ownership gaps in shared services', severity: 'Low' },
-    ],
-  },
-  {
-    id: 'metro-transit',
-    name: 'Metro Transit Authority',
-    type: 'Transit Agency',
-    region: 'BO-LP',
-    status: 'Active',
-    confidence: 85,
-    kpis: [
-      { label: 'Route Disruptions', value: '79', delta: '-3.0%' },
-      { label: 'Recovered', value: '68', delta: '+11.5%' },
-      { label: 'Avg Recovery', value: '1.8h', delta: '-0.3h' },
-      { label: 'SLA', value: '84%', delta: '+1.1%' },
-    ],
-    modules: ['Route Reliability Board', 'Dispatch Command', 'Hot Corridor Watch', 'Maintenance Escalation'],
-    risks: [
-      { title: 'Station safety incident recurrence trend', severity: 'Moderate' },
-      { title: 'Critical route MTTR above threshold', severity: 'High' },
-    ],
-  },
-  {
-    id: 'housing-lp',
-    name: 'La Paz Housing Authority',
-    type: 'Housing Authority',
-    region: 'BO-LP',
-    status: 'Pilot',
-    confidence: 79,
-    kpis: [
-      { label: 'Urgent Cases', value: '43', delta: '+5.1%' },
-      { label: 'Legal Exposure', value: '12', delta: '+1.7%' },
-      { label: 'Inspection Backlog', value: '67', delta: '-7.2%' },
-      { label: 'SLA', value: '81%', delta: '+2.0%' },
-    ],
-    modules: ['Tenant Triage', 'Hazard Escalation', 'Property Compliance', 'Legal Packet Builder'],
-    risks: [
-      { title: 'Aging-property hazard accumulation', severity: 'High' },
-      { title: 'Unverified urgent claims in backlog', severity: 'Moderate' },
-    ],
-  },
-  {
-    id: 'andean-utilities',
-    name: 'Andean Utilities Group',
-    type: 'Utilities Provider',
-    region: 'BO-OR',
-    status: 'Planning',
-    confidence: 84,
-    kpis: [
-      { label: 'Active Outages', value: '21', delta: '-10.4%' },
-      { label: 'Affected Users', value: '14,102', delta: '-6.0%' },
-      { label: 'ETA Accuracy', value: '87%', delta: '+4.2%' },
-      { label: 'SLA', value: '89%', delta: '+1.6%' },
-    ],
-    modules: ['Outage Map', 'Crew Readiness', 'Regulatory Export', 'Critical Node Monitor'],
-    risks: [
-      { title: 'Single-point substation dependency', severity: 'Moderate' },
-      { title: 'Delayed closure in regulatory incidents', severity: 'Moderate' },
+    modules: ['Student Welfare Queue', 'Campus Risk Radar', 'Counselor Routing', 'Parent Transparency Feed'],
+    reports: [
+      { id: 'EDU-2291', channel: 'App', title: 'Bullying incident in recess area', severity: 'High', status: 'Investigating', location: 'Campus Norte', eta: '45m' },
+      { id: 'EDU-2295', channel: 'WhatsApp', title: 'Unsafe gate crowding at pickup', severity: 'Moderate', status: 'New', location: 'Campus Centro', eta: '2h' },
+      { id: 'EDU-2302', channel: 'Web Portal', title: 'Facilities hazard in science lab', severity: 'High', status: 'Action Taken', location: 'Campus Este', eta: 'Completed' },
     ],
   },
 ];
 
-const TREND_BARS = [78, 64, 89, 52, 93, 74, 68, 88, 70, 81, 76, 91];
+const uniqueByType: Record<EntityType, { headline: string; color: string; channelFocus: string[] }> = {
+  City: {
+    headline: 'Urban Command Channel',
+    color: '#38bdf8',
+    channelFocus: ['Citizen WhatsApp Intake', 'Field Inspector App', 'Public Portal Reports'],
+  },
+  'Hospital Network': {
+    headline: 'Clinical Safety Channel',
+    color: '#22c55e',
+    channelFocus: ['Ward Supervisor Hotline', 'Compliance Web Form', 'Clinical Team Mobile'],
+  },
+  'School District': {
+    headline: 'Campus Safety Channel',
+    color: '#a78bfa',
+    channelFocus: ['Parent App Reporting', 'Anonymous Web Intake', 'Counselor Escalation Queue'],
+  },
+  University: {
+    headline: 'Academic Integrity Channel',
+    color: '#14b8a6',
+    channelFocus: ['Student Portal', 'Faculty Oversight Board', 'Campus Security Feed'],
+  },
+  'Transit Agency': {
+    headline: 'Mobility Reliability Channel',
+    color: '#f59e0b',
+    channelFocus: ['Station Hotline', 'Driver Mobile Alerts', 'Commuter Web Reports'],
+  },
+  'Housing Authority': {
+    headline: 'Tenant Protection Channel',
+    color: '#ef4444',
+    channelFocus: ['Tenant WhatsApp Intake', 'Inspector Field Workflow', 'Legal Case Pipeline'],
+  },
+  'Utilities Provider': {
+    headline: 'Service Continuity Channel',
+    color: '#84cc16',
+    channelFocus: ['Outage Mobile Alerts', 'Regulator Portal', 'Crew Dispatch Terminal'],
+  },
+};
 
 export default function EnhancedNexusPrototype() {
   const [selectedType, setSelectedType] = useState<EntityType | 'All'>('All');
   const [selectedEntityId, setSelectedEntityId] = useState(ENTITIES[0].id);
   const [view, setView] = useState<DashboardView>('Executive');
+  const [reportsByEntity, setReportsByEntity] = useState<Record<string, Report[]>>(
+    Object.fromEntries(ENTITIES.map((e) => [e.id, e.reports]))
+  );
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(ENTITIES.map((e) => e.type)))] as const, []);
-
-  const filteredEntities = useMemo(() => {
-    if (selectedType === 'All') return ENTITIES;
-    return ENTITIES.filter((entity) => entity.type === selectedType);
-  }, [selectedType]);
+  const filteredEntities = useMemo(
+    () => (selectedType === 'All' ? ENTITIES : ENTITIES.filter((e) => e.type === selectedType)),
+    [selectedType]
+  );
 
   const selectedEntity =
     filteredEntities.find((entity) => entity.id === selectedEntityId) || filteredEntities[0] || ENTITIES[0];
 
-  const statusColor = (status: Status) => {
-    if (status === 'Active') return '#22c55e';
-    if (status === 'Pilot') return '#f59e0b';
-    return '#60a5fa';
+  const currentReports = reportsByEntity[selectedEntity.id] || [];
+
+  const counts = useMemo(() => {
+    const total = currentReports.length;
+    const newCases = currentReports.filter((r) => r.status === 'New').length;
+    const taken = currentReports.filter((r) => r.status === 'Action Taken').length;
+    const resolved = currentReports.filter((r) => r.status === 'Resolved').length;
+    return { total, newCases, taken, resolved };
+  }, [currentReports]);
+
+  const updateReportStatus = (reportId: string, next: ReportStatus) => {
+    setReportsByEntity((prev) => ({
+      ...prev,
+      [selectedEntity.id]: (prev[selectedEntity.id] || []).map((report) =>
+        report.id === reportId ? { ...report, status: next, eta: next === 'Resolved' ? 'Completed' : report.eta } : report
+      ),
+    }));
   };
 
-  const severityColor = (severity: 'Low' | 'Moderate' | 'High') => {
-    if (severity === 'High') return '#ef4444';
-    if (severity === 'Moderate') return '#f59e0b';
-    return '#22c55e';
-  };
-
-  const viewSummary = useMemo(() => {
-    if (view === 'Executive') {
-      return 'Strategic command view with performance posture, trends, and institutional priorities.';
-    }
-    if (view === 'Operations') {
-      return 'Operational throughput view with live queues, response velocity, and assignment pressure.';
-    }
-    if (view === 'Risk & Liability') {
-      return 'Risk intelligence view focused on legal exposure, unresolved critical cases, and SLA vulnerabilities.';
-    }
-    return 'Public transparency view with safe summaries, trust metrics, and non-sensitive status communications.';
-  }, [view]);
+  const typeProfile = uniqueByType[selectedEntity.type];
 
   return (
     <main style={styles.page}>
-      <div style={styles.glowA} />
-      <div style={styles.glowB} />
-
       <div style={styles.shell}>
         <header style={styles.hero}>
           <div>
-            <div style={styles.eyebrow}>DPAL NEXUS • NEXT-GEN PROTOTYPE</div>
-            <h1 style={styles.title}>Institution Dashboard Experience</h1>
+            <div style={styles.eyebrow}>DPAL NEXUS • HIGH-VALUE DEMO</div>
+            <h1 style={styles.title}>Unique Dashboards by Channel + Entity</h1>
             <p style={styles.subtitle}>
-              No left navigation. Fast selector flow. Premium visual system for cities, hospitals, schools, transit,
-              housing, and utilities.
+              Better UI, real-feeling mock data, and working action buttons so you can demo real operational value now.
             </p>
           </div>
-          <div style={styles.heroActions}>
-            <button style={styles.secondaryBtn}>Share Preview</button>
-            <button style={styles.primaryBtn}>Open Fullscreen Demo</button>
-          </div>
+          <button style={styles.primaryBtn}>Generate Executive Brief</button>
         </header>
 
         <section style={styles.selectorPanel}>
-          <div style={styles.panelBlock}>
-            <div style={styles.panelLabel}>Entity Type</div>
+          <div style={styles.panelLabel}>Entity Type</div>
+          <div style={styles.chipWrap}>
+            {typeOptions.map((type) => (
+              <button
+                key={type}
+                onClick={() => {
+                  setSelectedType(type);
+                  const next = type === 'All' ? ENTITIES[0] : ENTITIES.find((e) => e.type === type);
+                  if (next) setSelectedEntityId(next.id);
+                }}
+                style={{ ...styles.chip, ...(selectedType === type ? styles.chipActive : {}) }}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+
+          <div style={styles.row}>
+            <select value={selectedEntity.id} onChange={(e) => setSelectedEntityId(e.target.value)} style={styles.select}>
+              {filteredEntities.map((entity) => (
+                <option key={entity.id} value={entity.id}>
+                  {entity.name}
+                </option>
+              ))}
+            </select>
             <div style={styles.chipWrap}>
-              {typeOptions.map((type) => (
-                <button
-                  key={type}
-                  onClick={() => {
-                    setSelectedType(type);
-                    const next = type === 'All' ? ENTITIES[0] : ENTITIES.find((entity) => entity.type === type);
-                    if (next) setSelectedEntityId(next.id);
-                  }}
-                  style={{ ...styles.chip, ...(selectedType === type ? styles.chipActive : {}) }}
-                >
-                  {type}
+              {DASHBOARD_VIEWS.map((item) => (
+                <button key={item} onClick={() => setView(item)} style={{ ...styles.chip, ...(view === item ? styles.chipActive : {}) }}>
+                  {item}
                 </button>
               ))}
             </div>
           </div>
+        </section>
 
-          <div style={styles.selectorRow}>
-            <div style={{ flex: 1, minWidth: 260 }}>
-              <div style={styles.panelLabel}>Entity</div>
-              <select
-                value={selectedEntity?.id}
-                onChange={(event) => setSelectedEntityId(event.target.value)}
-                style={styles.select}
-              >
-                {filteredEntities.map((entity) => (
-                  <option key={entity.id} value={entity.id}>
-                    {entity.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={{ flex: 1.4, minWidth: 280 }}>
-              <div style={styles.panelLabel}>Dashboard View</div>
-              <div style={styles.chipWrap}>
-                {DASHBOARD_VIEWS.map((item) => (
-                  <button
-                    key={item}
-                    onClick={() => setView(item)}
-                    style={{ ...styles.chip, ...(view === item ? styles.chipActive : {}) }}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </div>
+        <section style={{ ...styles.typeBanner, borderColor: typeProfile.color }}>
+          <div>
+            <div style={{ ...styles.panelLabel, color: typeProfile.color }}>{typeProfile.headline}</div>
+            <div style={styles.subtitle}>{selectedEntity.name} • {selectedEntity.region} • {selectedEntity.status}</div>
+          </div>
+          <div style={styles.channelWrap}>
+            {typeProfile.channelFocus.map((c) => (
+              <span key={c} style={{ ...styles.channelChip, borderColor: typeProfile.color }}>{c}</span>
+            ))}
           </div>
         </section>
 
-        {selectedEntity && (
-          <>
-            <section style={styles.entityTopCard}>
-              <div>
-                <div style={styles.entityName}>{selectedEntity.name}</div>
-                <div style={styles.entityMeta}>
-                  {selectedEntity.type} • {selectedEntity.region} •{' '}
-                  <span style={{ color: statusColor(selectedEntity.status), fontWeight: 700 }}>{selectedEntity.status}</span>
-                </div>
-              </div>
+        <section style={styles.kpiGrid}>
+          {selectedEntity.kpis.map((kpi) => (
+            <div key={kpi.label} style={styles.kpiCard}>
+              <div style={styles.kpiLabel}>{kpi.label}</div>
+              <div style={styles.kpiValue}>{kpi.value}</div>
+              <div style={styles.kpiDelta}>{kpi.delta}</div>
+            </div>
+          ))}
+        </section>
 
-              <div style={styles.pillGroup}>
-                <div style={styles.metricPill}>
-                  <div style={styles.metricPillLabel}>Confidence</div>
-                  <div style={styles.metricPillValue}>{selectedEntity.confidence}%</div>
-                </div>
-                <div style={styles.metricPill}>
-                  <div style={styles.metricPillLabel}>Current View</div>
-                  <div style={styles.metricPillValue}>{view}</div>
-                </div>
-              </div>
-            </section>
+        <section style={styles.twoCol}>
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>Reports & Actions (Working Buttons)</h3>
+            <div style={styles.valueRow}>
+              <span>Total: {counts.total}</span>
+              <span>New: {counts.newCases}</span>
+              <span>Action Taken: {counts.taken}</span>
+              <span>Resolved: {counts.resolved}</span>
+            </div>
 
-            <section style={styles.kpiGrid}>
-              {selectedEntity.kpis.map((kpi) => (
-                <div key={kpi.label} style={styles.kpiCard}>
-                  <div style={styles.kpiLabel}>{kpi.label}</div>
-                  <div style={styles.kpiValue}>{kpi.value}</div>
-                  {kpi.delta && <div style={styles.kpiDelta}>{kpi.delta} vs prior window</div>}
+            <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+              {currentReports.map((r) => (
+                <div key={r.id} style={styles.reportRow}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700 }}>{r.id} • {r.title}</div>
+                    <div style={{ color: '#94a3b8', fontSize: 13 }}>
+                      {r.channel} • {r.location} • Severity: {r.severity} • ETA: {r.eta}
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 12 }}>Status: <strong>{r.status}</strong></div>
+                  </div>
+                  <div style={styles.actionButtons}>
+                    <button style={styles.smallBtn} onClick={() => updateReportStatus(r.id, 'Investigating')}>Investigate</button>
+                    <button style={styles.smallBtn} onClick={() => updateReportStatus(r.id, 'Action Taken')}>Action Taken</button>
+                    <button style={styles.smallBtnPrimary} onClick={() => updateReportStatus(r.id, 'Resolved')}>Resolve</button>
+                  </div>
                 </div>
               ))}
-            </section>
+            </div>
+          </div>
 
-            <section style={styles.twoCol}>
-              <div style={styles.glassCard}>
-                <div style={styles.cardTitle}>View Narrative</div>
-                <p style={styles.cardBody}>{viewSummary}</p>
-
-                <div style={styles.cardTitle}>Core Modules</div>
-                <div style={styles.moduleWrap}>
-                  {selectedEntity.modules.map((module) => (
-                    <div key={module} style={styles.moduleChip}>
-                      {module}
-                    </div>
-                  ))}
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>Value Created by This Tech (Mock)</h3>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {selectedEntity.valueStats.map((s) => (
+                <div key={s.label} style={styles.valueStat}>
+                  <span>{s.label}</span>
+                  <strong>{s.value}</strong>
                 </div>
-              </div>
+              ))}
+            </div>
 
-              <div style={styles.glassCard}>
-                <div style={styles.cardTitle}>Risk Signals</div>
-                <div style={{ display: 'grid', gap: 10 }}>
-                  {selectedEntity.risks.map((risk) => (
-                    <div key={risk.title} style={styles.riskRow}>
-                      <div style={{ flex: 1 }}>{risk.title}</div>
-                      <span style={{ ...styles.severityTag, borderColor: severityColor(risk.severity), color: severityColor(risk.severity) }}>
-                        {risk.severity}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+            <h4 style={{ marginTop: 16, marginBottom: 8 }}>Priority Modules</h4>
+            <div style={styles.channelWrap}>
+              {selectedEntity.modules.map((m) => (
+                <span key={m} style={styles.channelChip}>{m}</span>
+              ))}
+            </div>
 
-                <button style={{ ...styles.primaryBtn, width: '100%', marginTop: 14 }}>Open Liability Drilldown</button>
-              </div>
-            </section>
-
-            <section style={styles.analyticsCard}>
-              <div style={styles.cardTitle}>12-Week Performance Pulse (Mock)</div>
-              <div style={styles.barChart}>
-                {TREND_BARS.map((value, idx) => (
-                  <div key={`${value}-${idx}`} style={styles.barCol}>
-                    <div style={{ ...styles.bar, height: `${value}%` }} />
-                    <div style={styles.barLabel}>W{idx + 1}</div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section style={styles.timelineCard}>
-              <div style={styles.cardTitle}>Live Activity Stream (Mock)</div>
-              <div style={styles.timelineItem}>
-                <div style={styles.timelineDot} />
-                <div>
-                  <strong>Critical case escalated</strong> — routed to legal operations with evidence bundle attached.
-                </div>
-              </div>
-              <div style={styles.timelineItem}>
-                <div style={styles.timelineDot} />
-                <div>
-                  <strong>SLA threshold breached</strong> — assignment rebalanced to reduce queue pressure.
-                </div>
-              </div>
-              <div style={styles.timelineItem}>
-                <div style={styles.timelineDot} />
-                <div>
-                  <strong>Executive digest generated</strong> — summary package ready for leadership review.
-                </div>
-              </div>
-            </section>
-          </>
-        )}
+            <h4 style={{ marginTop: 16, marginBottom: 8 }}>Current View: {view}</h4>
+            <p style={{ margin: 0, color: '#cbd5e1' }}>
+              {view === 'Executive' && 'Leadership posture: performance trend, exposure signals, and strategic intervention priorities.'}
+              {view === 'Operations' && 'Operational posture: queue pressure, assignment load, response latency, and throughput.'}
+              {view === 'Risk & Liability' && 'Risk posture: legal exposure, unresolved critical incidents, and evidence completeness.'}
+              {view === 'Public Portal' && 'Public posture: transparency feed, verified updates, trust metrics, and safe communications.'}
+            </p>
+          </div>
+        </section>
       </div>
     </main>
   );
@@ -388,321 +332,139 @@ export default function EnhancedNexusPrototype() {
 const styles: Record<string, React.CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background: 'radial-gradient(circle at 0% 0%, #14213d 0%, #070b14 45%, #05070d 100%)',
+    background: 'radial-gradient(circle at 10% 0%, #0f1f3d 0%, #060a13 50%, #04060c 100%)',
     color: '#e2e8f0',
     fontFamily: 'Inter, system-ui, sans-serif',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  glowA: {
-    position: 'absolute',
-    width: 500,
-    height: 500,
-    borderRadius: '50%',
-    background: 'rgba(59, 130, 246, 0.18)',
-    filter: 'blur(120px)',
-    top: -180,
-    left: -140,
-    pointerEvents: 'none',
-  },
-  glowB: {
-    position: 'absolute',
-    width: 460,
-    height: 460,
-    borderRadius: '50%',
-    background: 'rgba(16, 185, 129, 0.14)',
-    filter: 'blur(130px)',
-    bottom: -180,
-    right: -100,
-    pointerEvents: 'none',
-  },
-  shell: {
-    position: 'relative',
-    zIndex: 2,
-    maxWidth: 1240,
-    margin: '0 auto',
-    padding: 24,
-    display: 'grid',
-    gap: 16,
-  },
-  hero: {
-    border: '1px solid rgba(148, 163, 184, 0.24)',
-    borderRadius: 18,
     padding: 20,
-    background: 'linear-gradient(135deg, rgba(15,23,42,0.85), rgba(10,15,27,0.8))',
-    backdropFilter: 'blur(8px)',
+  },
+  shell: { maxWidth: 1280, margin: '0 auto', display: 'grid', gap: 14 },
+  hero: {
+    border: '1px solid #334155',
+    borderRadius: 16,
+    padding: 18,
+    background: 'linear-gradient(145deg, rgba(15,23,42,0.9), rgba(8,12,20,0.88))',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
     flexWrap: 'wrap',
   },
-  eyebrow: {
-    display: 'inline-block',
-    fontSize: 11,
-    letterSpacing: 1,
-    color: '#93c5fd',
-    border: '1px solid rgba(147,197,253,0.4)',
-    borderRadius: 999,
-    padding: '4px 10px',
-    marginBottom: 10,
-    fontWeight: 700,
-  },
-  title: {
-    margin: 0,
-    fontSize: 30,
-    fontWeight: 900,
-  },
-  subtitle: {
-    margin: '8px 0 0 0',
-    color: '#94a3b8',
-    maxWidth: 820,
-  },
-  heroActions: {
-    display: 'flex',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
+  eyebrow: { fontSize: 11, color: '#93c5fd', fontWeight: 700, letterSpacing: 1, marginBottom: 8 },
+  title: { margin: 0, fontSize: 30, fontWeight: 900 },
+  subtitle: { margin: 0, color: '#94a3b8' },
   primaryBtn: {
     border: '1px solid #2563eb',
     background: 'linear-gradient(135deg,#2563eb,#1d4ed8)',
     color: '#fff',
-    borderRadius: 12,
-    padding: '10px 14px',
-    fontWeight: 700,
-    cursor: 'pointer',
-  },
-  secondaryBtn: {
-    border: '1px solid #334155',
-    background: 'rgba(15, 23, 42, 0.7)',
-    color: '#cbd5e1',
-    borderRadius: 12,
-    padding: '10px 14px',
+    borderRadius: 10,
+    padding: '10px 12px',
     fontWeight: 700,
     cursor: 'pointer',
   },
   selectorPanel: {
-    border: '1px solid rgba(148, 163, 184, 0.18)',
-    borderRadius: 16,
-    padding: 16,
-    background: 'linear-gradient(160deg, rgba(11,18,32,0.88), rgba(7,12,22,0.82))',
+    border: '1px solid #334155',
+    borderRadius: 14,
+    padding: 14,
+    background: 'rgba(11,18,32,0.86)',
     display: 'grid',
-    gap: 14,
+    gap: 10,
   },
-  panelBlock: { display: 'grid', gap: 8 },
-  panelLabel: {
-    fontSize: 12,
-    color: '#93c5fd',
-    textTransform: 'uppercase',
-    fontWeight: 800,
-    letterSpacing: 0.7,
-  },
-  selectorRow: {
-    display: 'flex',
-    gap: 14,
-    flexWrap: 'wrap',
-  },
-  chipWrap: {
-    display: 'flex',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
+  panelLabel: { fontSize: 12, color: '#93c5fd', textTransform: 'uppercase', fontWeight: 800 },
+  chipWrap: { display: 'flex', flexWrap: 'wrap', gap: 8 },
   chip: {
     border: '1px solid #334155',
     background: '#111827',
     color: '#cbd5e1',
     borderRadius: 10,
-    padding: '8px 12px',
-    cursor: 'pointer',
+    padding: '7px 11px',
     fontWeight: 600,
+    cursor: 'pointer',
   },
-  chipActive: {
-    background: 'linear-gradient(135deg,#2563eb,#1d4ed8)',
-    borderColor: '#2563eb',
-    color: '#fff',
-    boxShadow: '0 10px 24px rgba(37,99,235,0.25)',
-  },
+  chipActive: { borderColor: '#2563eb', background: '#1d4ed8', color: '#fff' },
+  row: { display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' },
   select: {
-    width: '100%',
+    minWidth: 320,
     background: '#0f172a',
     color: '#e2e8f0',
     border: '1px solid #334155',
     borderRadius: 10,
     padding: '10px 12px',
   },
-  entityTopCard: {
-    border: '1px solid rgba(148, 163, 184, 0.18)',
-    borderRadius: 16,
-    padding: 16,
-    background: 'linear-gradient(135deg, rgba(11,18,32,0.85), rgba(9,14,24,0.8))',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 14,
-    flexWrap: 'wrap',
-  },
-  entityName: {
-    margin: 0,
-    fontSize: 26,
-    fontWeight: 850,
-  },
-  entityMeta: {
-    marginTop: 6,
-    color: '#94a3b8',
-  },
-  pillGroup: {
-    display: 'flex',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  metricPill: {
-    border: '1px solid #334155',
-    borderRadius: 12,
-    padding: '8px 12px',
-    minWidth: 120,
-    background: 'rgba(15,23,42,0.7)',
-  },
-  metricPillLabel: {
-    fontSize: 11,
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  metricPillValue: {
-    marginTop: 4,
-    fontWeight: 800,
-  },
-  kpiGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-    gap: 12,
-  },
-  kpiCard: {
-    border: '1px solid rgba(148, 163, 184, 0.18)',
+  typeBanner: {
+    border: '1px solid',
     borderRadius: 14,
     padding: 14,
-    background: 'linear-gradient(145deg, rgba(12,20,35,0.82), rgba(10,15,25,0.82))',
-  },
-  kpiLabel: {
-    fontSize: 12,
-    color: '#94a3b8',
-  },
-  kpiValue: {
-    marginTop: 8,
-    fontSize: 28,
-    fontWeight: 900,
-    lineHeight: 1,
-  },
-  kpiDelta: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#86efac',
-  },
-  twoCol: {
-    display: 'grid',
-    gap: 12,
-    gridTemplateColumns: '1.2fr 1fr',
-  },
-  glassCard: {
-    border: '1px solid rgba(148, 163, 184, 0.18)',
-    borderRadius: 16,
-    padding: 16,
-    background: 'linear-gradient(145deg, rgba(12,20,35,0.82), rgba(10,15,25,0.78))',
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 800,
-    marginBottom: 10,
-  },
-  cardBody: {
-    color: '#cbd5e1',
-    lineHeight: 1.7,
-    marginTop: 0,
-  },
-  moduleWrap: {
+    background: 'rgba(11,18,32,0.8)',
     display: 'flex',
+    justifyContent: 'space-between',
+    gap: 10,
     flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 10,
   },
-  moduleChip: {
+  channelWrap: { display: 'flex', gap: 8, flexWrap: 'wrap' },
+  channelChip: {
     border: '1px solid #334155',
-    background: 'rgba(30,41,59,0.7)',
     borderRadius: 999,
-    padding: '6px 10px',
-    fontSize: 13,
+    padding: '5px 10px',
     color: '#cbd5e1',
+    fontSize: 12,
   },
-  riskRow: {
+  kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 10 },
+  kpiCard: {
     border: '1px solid #334155',
     borderRadius: 12,
-    background: 'rgba(15,23,42,0.65)',
-    padding: '10px 12px',
+    padding: 12,
+    background: 'rgba(15,23,42,0.82)',
+  },
+  kpiLabel: { color: '#94a3b8', fontSize: 12 },
+  kpiValue: { fontSize: 28, fontWeight: 800, marginTop: 6 },
+  kpiDelta: { color: '#86efac', fontSize: 12, marginTop: 6 },
+  twoCol: { display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: 12 },
+  card: {
+    border: '1px solid #334155',
+    borderRadius: 14,
+    padding: 14,
+    background: 'rgba(11,18,32,0.86)',
+  },
+  cardTitle: { marginTop: 0, marginBottom: 10 },
+  valueRow: { display: 'flex', gap: 12, flexWrap: 'wrap', color: '#cbd5e1', fontSize: 13 },
+  reportRow: {
+    border: '1px solid #334155',
+    borderRadius: 12,
+    padding: 10,
+    background: '#0f172a',
     display: 'flex',
     gap: 10,
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
-  severityTag: {
-    border: '1px solid',
-    borderRadius: 999,
-    padding: '2px 8px',
-    fontSize: 12,
-    fontWeight: 700,
-    whiteSpace: 'nowrap',
-  },
-  analyticsCard: {
-    border: '1px solid rgba(148, 163, 184, 0.18)',
-    borderRadius: 16,
-    padding: 16,
-    background: 'linear-gradient(145deg, rgba(12,20,35,0.82), rgba(10,15,25,0.78))',
-  },
-  barChart: {
-    marginTop: 12,
-    height: 210,
-    display: 'grid',
-    gridTemplateColumns: 'repeat(12, minmax(24px, 1fr))',
-    gap: 8,
-    alignItems: 'end',
-  },
-  barCol: {
-    height: '100%',
-    display: 'grid',
-    gridTemplateRows: '1fr auto',
-    alignItems: 'end',
-    gap: 6,
-  },
-  bar: {
-    width: '100%',
+  actionButtons: { display: 'flex', gap: 6, flexWrap: 'wrap' },
+  smallBtn: {
+    border: '1px solid #475569',
+    background: '#1e293b',
+    color: '#e2e8f0',
     borderRadius: 8,
-    background: 'linear-gradient(180deg,#38bdf8,#2563eb)',
-    boxShadow: '0 8px 16px rgba(37,99,235,0.25)',
+    padding: '6px 8px',
+    fontSize: 12,
+    cursor: 'pointer',
   },
-  barLabel: {
-    textAlign: 'center',
-    color: '#64748b',
-    fontSize: 11,
+  smallBtnPrimary: {
+    border: '1px solid #16a34a',
+    background: '#166534',
+    color: '#fff',
+    borderRadius: 8,
+    padding: '6px 8px',
+    fontSize: 12,
+    cursor: 'pointer',
+    fontWeight: 700,
   },
-  timelineCard: {
-    border: '1px solid rgba(148, 163, 184, 0.18)',
-    borderRadius: 16,
-    padding: 16,
-    background: 'linear-gradient(145deg, rgba(12,20,35,0.82), rgba(10,15,25,0.78))',
-    display: 'grid',
-    gap: 10,
-  },
-  timelineItem: {
+  valueStat: {
+    border: '1px solid #334155',
+    borderRadius: 10,
+    padding: '9px 10px',
     display: 'flex',
+    justifyContent: 'space-between',
     gap: 10,
-    alignItems: 'flex-start',
     color: '#cbd5e1',
-    lineHeight: 1.6,
-  },
-  timelineDot: {
-    width: 9,
-    height: 9,
-    borderRadius: '50%',
-    marginTop: 7,
-    background: '#38bdf8',
-    boxShadow: '0 0 0 4px rgba(56,189,248,0.2)',
+    background: '#0f172a',
   },
 };
