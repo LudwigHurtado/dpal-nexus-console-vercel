@@ -540,8 +540,9 @@ export default function EnhancedNexusPrototype() {
     void fetchLiveReports();
   }, [selectedEntity.id, selectedEntity.name, selectedEntity.type]);
 
-  const updateReportStatus = async (reportId: string, next: ReportStatus) => {
-    const note = actionNote.trim() || `Updated from Nexus console (${selectedEntity.name})`;
+  const updateReportStatus = async (reportId: string, next: ReportStatus, meta?: { assignedTo?: string; note?: string }) => {
+    const note = (meta?.note || actionNote).trim() || `Updated from Nexus console (${selectedEntity.name})`;
+    const assignee = (meta?.assignedTo || assignedTo).trim();
     setReportsByEntity((prev) => ({
       ...prev,
       [selectedEntity.id]: (prev[selectedEntity.id] || []).map((report) =>
@@ -550,7 +551,7 @@ export default function EnhancedNexusPrototype() {
               ...report,
               status: next,
               eta: next === 'Resolved' ? 'Completed' : report.eta,
-              assignedTo: assignedTo.trim() || report.assignedTo,
+              assignedTo: assignee || report.assignedTo,
               lastActionNote: note,
             }
           : report
@@ -572,7 +573,7 @@ export default function EnhancedNexusPrototype() {
       }
     }
 
-    logAction(`${reportId} changed to ${next}${assignedTo.trim() ? ` (assigned: ${assignedTo.trim()})` : ''}`);
+    logAction(`${reportId} changed to ${next}${assignee ? ` (assigned: ${assignee})` : ''}`);
     setActionNote('');
     setActiveArea('audit');
   };
@@ -581,8 +582,41 @@ export default function EnhancedNexusPrototype() {
     setActiveArea(area);
     logAction(`Switched section to ${area}`);
   };
+
+  const quickRefer = async (report: Report, target: string) => {
+    await updateReportStatus(report.id, 'Investigating', {
+      assignedTo: target,
+      note: `Referred to ${target} from reports queue`,
+    });
+  };
+
   const profile = uniqueByType[selectedEntity.type];
   const infoNeeds = CATEGORY_INFO_NEEDS[selectedEntity.type] || [];
+
+  const referralTargets = (report: Report): string[] => {
+    const baseByType: Record<EntityType, string[]> = {
+      City: ['Public Works', 'City Legal', 'Traffic Control'],
+      'County Government': ['County Ops Desk', 'Emergency Mgmt', 'County Legal'],
+      'Hospital Network': ['Clinical Risk Team', 'Compliance Office', 'Patient Safety Board'],
+      'School District': ['Campus Admin', 'Counselor Team', 'District Safety Office'],
+      University: ['Student Affairs', 'Campus Security', 'Governance Office'],
+      'Transit Agency': ['Route Dispatch', 'Infrastructure Team', 'Safety Command'],
+      'Police Department': ['Patrol Supervisor', 'Investigations Unit', 'Evidence Desk'],
+      'Fire Department': ['Station Commander', 'Fire Prevention Unit', 'Emergency Ops'],
+      'Housing Authority': ['Inspection Unit', 'Tenant Protection Desk', 'Legal Affairs'],
+      'Utilities Provider': ['Grid Ops Center', 'Field Crew Dispatch', 'Regulatory Desk'],
+      'Retail Chain': ['Store Manager', 'Loss Prevention', 'Regional Risk Office'],
+      'Logistics Company': ['Hub Ops Lead', 'Driver Safety Office', 'Claims Desk'],
+      'Banking Group': ['Branch Ops Lead', 'Fraud Unit', 'Compliance Officer'],
+      'Insurance Provider': ['Claims Supervisor', 'Fraud Analyst', 'Legal Review'],
+      'Telecom Provider': ['Network NOC', 'Field Tech Dispatch', 'Customer Recovery Desk'],
+      'Airport Authority': ['Terminal Ops', 'Ground Safety Unit', 'Aviation Compliance'],
+    };
+
+    const base = baseByType[selectedEntity.type] || ['Operations Desk', 'Risk Team', 'Legal Team'];
+    if (report.severity === 'High') return [base[1], base[0], base[2]];
+    return base;
+  };
 
   const renderEntityLayout = () => {
     if (profile.layout === 'city') {
@@ -788,11 +822,25 @@ export default function EnhancedNexusPrototype() {
                 </div>
                 <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
                   {currentReports.map((r) => (
-                    <button key={r.id} onClick={() => { setSelectedReportId(r.id); logAction(`Selected report ${r.id}`); }} style={{ ...styles.reportRow, ...(selectedReport?.id === r.id ? styles.reportSelected : {}) }}>
-                      <div style={{ fontWeight: 700 }}>{r.id} • {r.title}</div>
-                      <div style={{ color: '#94a3b8', fontSize: 12 }}>{r.channel} • {r.location} • {r.severity} • ETA {r.eta}</div>
-                      <div style={{ marginTop: 4, fontSize: 12 }}>Status: <strong>{r.status}</strong></div>
-                    </button>
+                    <div key={r.id} style={{ ...styles.reportRow, ...(selectedReport?.id === r.id ? styles.reportSelected : {}) }}>
+                      <button style={styles.reportSelectBtn} onClick={() => { setSelectedReportId(r.id); logAction(`Selected report ${r.id}`); }}>
+                        <div style={{ fontWeight: 700 }}>{r.id} • {r.title}</div>
+                        <div style={{ color: '#94a3b8', fontSize: 12 }}>{r.channel} • {r.location} • {r.severity} • ETA {r.eta}</div>
+                        <div style={{ marginTop: 4, fontSize: 12 }}>Status: <strong>{r.status}</strong></div>
+                      </button>
+
+                      <div style={styles.referRow}>
+                        <span style={styles.referHint}>Refer to:</span>
+                        {referralTargets(r).slice(0, 3).map((target) => (
+                          <button key={`${r.id}-${target}`} style={styles.referBtn} onClick={() => void quickRefer(r, target)}>
+                            {target}
+                          </button>
+                        ))}
+                        <button style={styles.referBtnPrimary} onClick={() => void updateReportStatus(r.id, 'Action Taken', { note: 'Immediate mitigation started from queue' })}>
+                          Take Action
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </>
@@ -860,6 +908,18 @@ export default function EnhancedNexusPrototype() {
                 <div style={styles.valueStat}><span>Assigned To</span><strong>{selectedReport.assignedTo || 'Unassigned'}</strong></div>
                 <div style={styles.valueStat}><span>Last Action Note</span><strong>{selectedReport.lastActionNote || '—'}</strong></div>
                 <p style={{ color: '#cbd5e1', marginTop: 12 }}>{selectedReport.summary}</p>
+
+                <div style={styles.recommendCard}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Recommended Referrals</div>
+                  <div style={styles.referRow}>
+                    {referralTargets(selectedReport).map((target) => (
+                      <button key={`detail-${selectedReport.id}-${target}`} style={styles.referBtn} onClick={() => void quickRefer(selectedReport, target)}>
+                        {target}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div style={styles.actionButtons}>
                   <button style={styles.smallBtn} onClick={() => openArea('dispatch')}>Go to Action Center</button>
                   <button style={styles.smallBtn} onClick={() => openArea('audit')}>Open Audit Trail</button>
@@ -934,8 +994,14 @@ const styles: Record<string, React.CSSProperties> = {
   card: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)' },
   cardTitle: { marginTop: 0, marginBottom: 10 },
   valueRow: { display: 'flex', gap: 12, flexWrap: 'wrap', color: '#cbd5e1', fontSize: 13 },
-  reportRow: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: '#0f172a', display: 'grid', gap: 3, textAlign: 'left', cursor: 'pointer', color: '#e2e8f0' },
+  reportRow: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: '#0f172a', display: 'grid', gap: 8, textAlign: 'left', color: '#e2e8f0' },
+  reportSelectBtn: { border: 'none', background: 'transparent', color: '#e2e8f0', textAlign: 'left', padding: 0, cursor: 'pointer' },
   reportSelected: { borderColor: '#2563eb', boxShadow: '0 0 0 1px #2563eb inset' },
+  referRow: { display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' },
+  referHint: { fontSize: 11, color: '#94a3b8', marginRight: 2 },
+  referBtn: { border: '1px solid #334155', background: '#111827', color: '#cbd5e1', borderRadius: 999, padding: '4px 9px', fontSize: 11, cursor: 'pointer' },
+  referBtnPrimary: { border: '1px solid #2563eb', background: '#1d4ed8', color: '#fff', borderRadius: 999, padding: '4px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 700 },
+  recommendCard: { border: '1px dashed #334155', borderRadius: 10, padding: 10, marginTop: 10, background: 'rgba(15,23,42,0.55)' },
   formGrid: { display: 'grid', gap: 8, marginTop: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' },
   input: { border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', borderRadius: 8, padding: '8px 10px', fontSize: 12 },
   actionButtons: { display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 },
