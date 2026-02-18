@@ -654,11 +654,11 @@ const CATEGORY_PLAYBOOKS: Record<EntityType, CategoryPlaybook> = {  City: {
 
 export default function EnhancedNexusPrototype() {
   const [selectedType, setSelectedType] = useState<EntityType | 'All'>('All');
-  const [selectedEntityId, setSelectedEntityId] = useState(ENTITIES[0].id);
+  const [selectedEntityId, setSelectedEntityId] = useState('nyc-city');
   const [view, setView] = useState<DashboardView>('Executive');
   const [activeArea, setActiveArea] = useState<ActionArea>('reports');
   const [reportsByEntity, setReportsByEntity] = useState<Record<string, Report[]>>(Object.fromEntries(ENTITIES.map((e) => [e.id, e.reports])));
-  const [selectedReportId, setSelectedReportId] = useState<string>(ENTITIES[0].reports[0].id);
+  const [selectedReportId, setSelectedReportId] = useState<string>('NYC-1001');
   const [apiBaseInput, setApiBaseInput] = useState<string>(defaultApiBase);
   const apiBase = apiBaseInput.trim();
   const [syncMessage, setSyncMessage] = useState<string>(apiBase ? 'Connected to DPAL API' : 'Using demo data (set NEXT_PUBLIC_DPAL_API_BASE)');
@@ -815,12 +815,13 @@ export default function EnhancedNexusPrototype() {
   }, [reportsByEntity, auditEntries]);
 
   useEffect(() => {
+    const currentType: EntityType = selectedType === 'All' ? selectedEntity.type : selectedType;
     const base: Record<string, string> = {};
-    (CATEGORY_INTAKE_FIELDS[selectedEntity.type] || []).forEach((f) => {
+    (CATEGORY_INTAKE_FIELDS[currentType] || []).forEach((f) => {
       base[f.key] = '';
     });
     setNewItemFields(base);
-  }, [selectedEntity.type]);
+  }, [selectedType, selectedEntity.type]);
 
   useEffect(() => {
     if (!apiBase) return;
@@ -1182,11 +1183,12 @@ export default function EnhancedNexusPrototype() {
     logAction(`Audit work ${id} moved to ${status}`);
   };
 
-  const profile = uniqueByType[selectedEntity.type];
-  const infoNeeds = CATEGORY_INFO_NEEDS[selectedEntity.type] || [];
-  const playbook = CATEGORY_PLAYBOOKS[selectedEntity.type];
-  const intakeFields = CATEGORY_INTAKE_FIELDS[selectedEntity.type] || [];
-  const activeCategoryImage = categoryImageForType(selectedEntity.type);
+  const activeCategoryType: EntityType = selectedType === 'All' ? selectedEntity.type : selectedType;
+  const profile = uniqueByType[activeCategoryType];
+  const infoNeeds = CATEGORY_INFO_NEEDS[activeCategoryType] || [];
+  const playbook = CATEGORY_PLAYBOOKS[activeCategoryType];
+  const intakeFields = CATEGORY_INTAKE_FIELDS[activeCategoryType] || [];
+  const activeCategoryImage = categoryImageForType(activeCategoryType);
 
   const referralTargets = (report: Report): string[] => {
     const baseByType: Record<EntityType, string[]> = {
@@ -1208,7 +1210,7 @@ export default function EnhancedNexusPrototype() {
       'Airport Authority': ['Terminal Ops', 'Ground Safety Unit', 'Aviation Compliance'],
     };
 
-    const base = baseByType[selectedEntity.type] || ['Operations Desk', 'Risk Team', 'Legal Team'];
+    const base = baseByType[activeCategoryType] || ['Operations Desk', 'Risk Team', 'Legal Team'];
     if (report.severity === 'High') return [base[1], base[0], base[2]];
     return base;
   };
@@ -1540,7 +1542,7 @@ export default function EnhancedNexusPrototype() {
             style={styles.heroImage}
             onError={(e) => {
               e.currentTarget.onerror = null;
-              e.currentTarget.src = categoryFallbackImage(selectedEntity.type);
+              e.currentTarget.src = categoryFallbackImage(activeCategoryType);
             }}
           />
           <div style={styles.heroOverlay}>
@@ -1564,7 +1566,7 @@ export default function EnhancedNexusPrototype() {
         </section>
 
         <section style={styles.infoNeedsCard}>
-          <h3 style={styles.cardTitle}>Category Intelligence Requirements ({selectedEntity.type})</h3>
+          <h3 style={styles.cardTitle}>Category Intelligence Requirements ({activeCategoryType})</h3>
           <p style={{ ...styles.subtitle, marginBottom: 10 }}>
             These are the key information elements this category should track to operate the full DPAL workflow.
           </p>
@@ -1582,16 +1584,16 @@ export default function EnhancedNexusPrototype() {
         <section style={styles.playbookCard}>
           <div style={styles.playbookTop}>
             <div>
-              <h3 style={styles.cardTitle}>Category Operations Console ({selectedEntity.type})</h3>
+              <h3 style={styles.cardTitle}>Category Operations Console ({activeCategoryType})</h3>
               <p style={{ ...styles.subtitle, marginBottom: 10 }}>{playbook.operationalObjective}</p>
             </div>
             <img
               src={activeCategoryImage}
-              alt={selectedEntity.type}
+              alt={activeCategoryType}
               style={styles.playbookImage}
               onError={(e) => {
                 e.currentTarget.onerror = null;
-                e.currentTarget.src = categoryFallbackImage(selectedEntity.type);
+                e.currentTarget.src = categoryFallbackImage(activeCategoryType);
               }}
             />
           </div>
@@ -1608,7 +1610,7 @@ export default function EnhancedNexusPrototype() {
           <div style={{ ...styles.referRow, marginTop: 10 }}>
             {playbook.quickActions.map((action) => (
               <button
-                key={`${selectedEntity.type}-${action.label}`}
+                key={`${activeCategoryType}-${action.label}`}
                 style={styles.referBtnPrimary}
                 onClick={() => {
                   if (!selectedReport) return;
@@ -1991,9 +1993,9 @@ export default function EnhancedNexusPrototype() {
                 </div>
 
                 <div style={{ ...styles.recommendCard, marginTop: 10 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Category Links ({selectedEntity.type})</div>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Category Links ({activeCategoryType})</div>
                   <div style={styles.referRow}>
-                    {categoryLinks(selectedEntity.type).map((link) => (
+                    {categoryLinks(activeCategoryType).map((link) => (
                       <button
                         key={`${selectedEntity.type}-${link.label}`}
                         style={styles.referBtn}
