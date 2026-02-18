@@ -535,6 +535,8 @@ export default function EnhancedNexusPrototype() {
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [aiByReportId, setAiByReportId] = useState<Record<string, AiInsight>>({});
   const [aiLoadingFor, setAiLoadingFor] = useState<string>('');
+  const [executiveBrief, setExecutiveBrief] = useState('');
+  const [executiveBriefLoading, setExecutiveBriefLoading] = useState(false);
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(ENTITIES.map((e) => e.type)))] as const, []);
   const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
@@ -734,6 +736,51 @@ export default function EnhancedNexusPrototype() {
     };
   };
 
+  const generateExecutiveBrief = async () => {
+    setExecutiveBriefLoading(true);
+    try {
+      const openCases = currentReports.filter((r) => r.status !== 'Resolved').length;
+      const highRisk = currentReports.filter((r) => r.severity === 'High').length;
+      const resolved = currentReports.filter((r) => r.status === 'Resolved').length;
+      const topChannels = Array.from(new Set(currentReports.map((r) => r.channel))).slice(0, 3).join(', ') || 'Mixed';
+
+      const fallback = [
+        `Executive Brief — ${selectedEntity.name} (${selectedEntity.type})`,
+        `Period focus: operational snapshot for ${new Date().toLocaleDateString()}.`,
+        `Current queue: ${currentReports.length} total cases, ${openCases} open, ${resolved} resolved, ${highRisk} high-severity.`,
+        `Primary intake channels: ${topChannels}.`,
+        `Key concern: ${currentReports[0]?.title || 'No active critical title available'}.`,
+        `Recommended action: prioritize high-severity and repeat-location cases, maintain SLA discipline, and run daily review with assigned owners.`,
+      ].join('\n');
+
+      if (!DPAL_API_BASE) {
+        setExecutiveBrief(fallback);
+        logAction('Executive brief generated (local template)');
+        return;
+      }
+
+      const prompt = `Create a concise executive operations brief (6-8 lines) for ${selectedEntity.name} (${selectedEntity.type}). Include current risk level, queue snapshot, high-priority issue, recommended actions, and accountability note. Data: ${JSON.stringify({ reports: currentReports.slice(0, 10), kpis: selectedEntity.kpis, valueStats: selectedEntity.valueStats })}`;
+
+      const res = await fetch(`${DPAL_API_BASE}/api/ai/ask`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, tier: 'cheap' }),
+      });
+
+      if (!res.ok) throw new Error(`brief_http_${res.status}`);
+      const json = await res.json();
+      const text = String(json?.answer || '').trim();
+      setExecutiveBrief(text || fallback);
+      logAction('Executive brief generated (AI)');
+    } catch (error) {
+      console.error(error);
+      setExecutiveBrief(`Executive Brief — ${selectedEntity.name}\nAI generation failed, using operational fallback. Review open high-severity cases, enforce SLA on investigating items, and verify closure evidence before resolution.`);
+      logAction('Executive brief generation failed; fallback created');
+    } finally {
+      setExecutiveBriefLoading(false);
+    }
+  };
+
   const runAiForReport = async (report: Report) => {
     setAiLoadingFor(report.id);
     try {
@@ -840,7 +887,15 @@ export default function EnhancedNexusPrototype() {
             <h1 style={styles.title}>Connected Dashboards with Clickable Flows</h1>
             <p style={styles.subtitle}>Buttons now navigate between sections, reports update status, and each entity type has a unique layout feel.</p>
           </div>
-          <button style={styles.primaryBtn} onClick={() => openArea('analytics')}>Open Executive Brief</button>
+          <button
+            style={styles.primaryBtn}
+            onClick={() => {
+              openArea('analytics');
+              void generateExecutiveBrief();
+            }}
+          >
+            {executiveBriefLoading ? 'Generating Brief…' : 'Open Executive Brief'}
+          </button>
         </header>
 
         <section style={styles.selectorPanel}>
@@ -1092,6 +1147,28 @@ export default function EnhancedNexusPrototype() {
                 <div style={styles.uniqueGrid3}>
                   {selectedEntity.valueStats.map((s) => <MiniTile key={s.label} title={s.label} value={s.value} subtitle="value realized" />)}
                 </div>
+
+                <div style={styles.aiCard}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontWeight: 800 }}>Executive Brief</div>
+                    <div style={styles.actionButtons}>
+                      <button style={styles.smallBtn} onClick={() => void generateExecutiveBrief()}>
+                        {executiveBriefLoading ? 'Regenerating…' : 'Regenerate'}
+                      </button>
+                      <button
+                        style={styles.smallBtn}
+                        onClick={() => {
+                          if (!executiveBrief) return;
+                          void navigator.clipboard?.writeText(executiveBrief);
+                          logAction('Executive brief copied to clipboard');
+                        }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <pre style={styles.briefText}>{executiveBrief || 'No brief yet. Click Regenerate to create one.'}</pre>
+                </div>
               </>
             )}
 
@@ -1271,6 +1348,7 @@ const styles: Record<string, React.CSSProperties> = {
   aiCard: { border: '1px solid #334155', borderRadius: 10, padding: 10, marginTop: 10, background: 'rgba(2,6,23,0.45)' },
   aiGrid: { display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', marginTop: 8 },
   aiItem: { border: '1px solid #334155', borderRadius: 8, padding: '6px 8px', display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#cbd5e1' },
+  briefText: { marginTop: 10, whiteSpace: 'pre-wrap', color: '#cbd5e1', fontSize: 12, lineHeight: 1.6, background: '#0f172a', border: '1px solid #334155', borderRadius: 8, padding: '10px 12px' },
   similarBtn: { border: '1px solid #334155', background: '#0b1220', color: '#cbd5e1', borderRadius: 8, padding: '6px 8px', textAlign: 'left', cursor: 'pointer', fontSize: 12 },
   formGrid: { display: 'grid', gap: 8, marginTop: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' },
   input: { border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', borderRadius: 8, padding: '8px 10px', fontSize: 12 },
