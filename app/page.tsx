@@ -637,6 +637,9 @@ export default function EnhancedNexusPrototype() {
   const [newItemFields, setNewItemFields] = useState<Record<string, string>>({});
   const [mockLinkResponse, setMockLinkResponse] = useState('');
   const [interactionMessage, setInteractionMessage] = useState('');
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceListening, setVoiceListening] = useState(false);
+  const [voiceTarget, setVoiceTarget] = useState<'actionNote' | 'newSummary'>('actionNote');
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(ENTITIES.map((e) => e.type)))] as const, []);
   const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
@@ -669,6 +672,63 @@ export default function EnhancedNexusPrototype() {
   const logAgent = (text: string) => {
     const stamp = new Date().toLocaleTimeString();
     setAgentLog((prev) => [`${stamp} - ${text}`, ...prev].slice(0, 12));
+  };
+
+  const speakText = (text: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      setInteractionMessage('Voice not supported in this browser.');
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    window.speechSynthesis.speak(utterance);
+    setVoiceEnabled(true);
+    logAction('Voice playback started');
+  };
+
+  const stopSpeaking = () => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      setInteractionMessage('Voice playback stopped.');
+      logAction('Voice playback stopped');
+    }
+  };
+
+  const startVoiceInput = () => {
+    if (typeof window === 'undefined') return;
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      setInteractionMessage('Voice input not supported in this browser.');
+      return;
+    }
+
+    const recognition = new SR();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    setVoiceListening(true);
+    recognition.onresult = (event: any) => {
+      const transcript = String(event?.results?.[0]?.[0]?.transcript || '').trim();
+      if (!transcript) return;
+      if (voiceTarget === 'actionNote') {
+        setActionNote((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      } else {
+        setNewItemSummary((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      }
+      setInteractionMessage(`Voice captured into ${voiceTarget === 'actionNote' ? 'Action Note' : 'New Item Summary'}.`);
+      logAction(`Voice dictation captured for ${voiceTarget}`);
+    };
+    recognition.onerror = () => {
+      setInteractionMessage('Voice input failed. Try again.');
+    };
+    recognition.onend = () => {
+      setVoiceListening(false);
+    };
+
+    recognition.start();
   };
 
   useEffect(() => {
@@ -1395,6 +1455,26 @@ export default function EnhancedNexusPrototype() {
           </section>
         )}
 
+        <section style={styles.voicePanel}>
+          <div>
+            <div style={styles.panelLabel}>Voice Controls</div>
+            <div style={{ color: '#94a3b8', fontSize: 12 }}>
+              Speak briefs/reports and dictate directly into action notes or new item summary.
+            </div>
+          </div>
+          <div style={styles.referRow}>
+            <select value={voiceTarget} onChange={(e) => setVoiceTarget(e.target.value as 'actionNote' | 'newSummary')} style={styles.input}>
+              <option value="actionNote">Dictate to Action Note</option>
+              <option value="newSummary">Dictate to New Item Summary</option>
+            </select>
+            <button style={styles.smallBtn} onClick={startVoiceInput}>{voiceListening ? 'Listening…' : 'Start Voice Input'}</button>
+            <button style={styles.smallBtn} onClick={() => speakText(executiveBrief || selectedReport?.summary || 'No text available to read.')}>Speak Current Brief</button>
+            <button style={styles.smallBtn} onClick={() => speakText(selectedReport ? `${selectedReport.title}. ${selectedReport.summary}` : 'No report selected.')}>Speak Report Detail</button>
+            <button style={styles.smallBtn} onClick={stopSpeaking}>Stop Voice</button>
+            <span style={{ color: voiceEnabled ? '#86efac' : '#94a3b8', fontSize: 12 }}>{voiceEnabled ? 'Voice ready' : 'Voice idle'}</span>
+          </div>
+        </section>
+
         <section style={styles.railwayCard}>
           <div style={{ flex: 1, minWidth: 280 }}>
             <div style={styles.panelLabel}>Railway + Mongo Integration</div>
@@ -1653,6 +1733,16 @@ export default function EnhancedNexusPrototype() {
                   <pre style={styles.briefText}>{mockLinkResponse || 'Select a category link to view mock response and intended behavior.'}</pre>
                 </div>
 
+                <div style={styles.responseCard}>
+                  <div style={{ fontWeight: 800, marginBottom: 6 }}>Response Composer</div>
+                  <p style={styles.subtitle}>Use quick response templates and voice controls to accelerate action quality.</p>
+                  <div style={styles.referRow}>
+                    <button style={styles.referBtn} onClick={() => setActionNote('Initial response sent. Team assigned and ETA communicated.')}>Template: Initial Response</button>
+                    <button style={styles.referBtn} onClick={() => setActionNote('Evidence request sent. Awaiting documents and photos.')}>Template: Evidence Request</button>
+                    <button style={styles.referBtn} onClick={() => setActionNote('Escalation notice sent to legal/compliance due to risk profile.')}>Template: Escalation Notice</button>
+                  </div>
+                </div>
+
                 <div style={styles.actionButtons}>
                   <button style={styles.smallBtn} onClick={() => openArea('dispatch')}>Go to Action Center</button>
                   <button style={styles.smallBtn} onClick={() => openArea('audit')}>Open Audit Trail</button>
@@ -1734,6 +1824,7 @@ const styles: Record<string, React.CSSProperties> = {
   navCard: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: 'rgba(11,18,32,0.86)', display: 'flex', gap: 8, flexWrap: 'wrap' },
   railwayCard: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: 'rgba(11,18,32,0.86)', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' },
   interactionBanner: { border: '1px solid #2563eb', borderRadius: 10, padding: '8px 10px', background: 'rgba(37,99,235,0.12)', color: '#dbeafe', fontSize: 13 },
+  voicePanel: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: 'rgba(11,18,32,0.86)', display: 'grid', gap: 8 },
   sectionBtn: { border: '1px solid #334155', background: '#0f172a', color: '#cbd5e1', borderRadius: 9, padding: '8px 10px', cursor: 'pointer', fontWeight: 700 },
   sectionBtnActive: { borderColor: '#2563eb', background: '#1d4ed8', color: '#fff' },
   twoCol: { display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 12 },
@@ -1749,6 +1840,7 @@ const styles: Record<string, React.CSSProperties> = {
   referBtn: { border: '1px solid #334155', background: '#111827', color: '#cbd5e1', borderRadius: 999, padding: '4px 9px', fontSize: 11, cursor: 'pointer' },
   referBtnPrimary: { border: '1px solid #2563eb', background: '#1d4ed8', color: '#fff', borderRadius: 999, padding: '4px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 700 },
   recommendCard: { border: '1px dashed #334155', borderRadius: 10, padding: 10, marginTop: 10, background: 'rgba(15,23,42,0.55)' },
+  responseCard: { border: '1px dashed #334155', borderRadius: 10, padding: 10, marginTop: 10, background: 'rgba(15,23,42,0.55)' },
   aiCard: { border: '1px solid #334155', borderRadius: 10, padding: 10, marginTop: 10, background: 'rgba(2,6,23,0.45)' },
   aiGrid: { display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', marginTop: 8 },
   aiItem: { border: '1px solid #334155', borderRadius: 8, padding: '6px 8px', display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#cbd5e1' },
