@@ -35,6 +35,8 @@ type Report = {
   location: string;
   eta: string;
   summary: string;
+  assignedTo?: string;
+  lastActionNote?: string;
 };
 
 type Entity = {
@@ -444,6 +446,9 @@ export default function EnhancedNexusPrototype() {
   const [selectedReportId, setSelectedReportId] = useState<string>(ENTITIES[0].reports[0].id);
   const [syncMessage, setSyncMessage] = useState<string>(DPAL_API_BASE ? 'Connected to DPAL API' : 'Using demo data (set NEXT_PUBLIC_DPAL_API_BASE)');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [assignedTo, setAssignedTo] = useState('');
+  const [actionNote, setActionNote] = useState('');
+  const [auditEntries, setAuditEntries] = useState<string[]>([]);
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(ENTITIES.map((e) => e.type)))] as const, []);
   const filteredEntities = useMemo(() => (selectedType === 'All' ? ENTITIES : ENTITIES.filter((e) => e.type === selectedType)), [selectedType]);
@@ -461,6 +466,31 @@ export default function EnhancedNexusPrototype() {
     };
     return { total, byStatus };
   }, [currentReports]);
+
+  const logAction = (text: string) => {
+    const stamp = new Date().toLocaleTimeString();
+    setAuditEntries((prev) => [`${stamp} - ${text}`, ...prev].slice(0, 20));
+  };
+
+  useEffect(() => {
+    try {
+      const rawReports = localStorage.getItem('nexus_reports_state_v1');
+      const rawAudit = localStorage.getItem('nexus_audit_state_v1');
+      if (rawReports) setReportsByEntity(JSON.parse(rawReports));
+      if (rawAudit) setAuditEntries(JSON.parse(rawAudit));
+    } catch {
+      // ignore hydrate errors
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('nexus_reports_state_v1', JSON.stringify(reportsByEntity));
+      localStorage.setItem('nexus_audit_state_v1', JSON.stringify(auditEntries));
+    } catch {
+      // ignore persistence errors
+    }
+  }, [reportsByEntity, auditEntries]);
 
   useEffect(() => {
     if (!DPAL_API_BASE) return;
@@ -511,10 +541,19 @@ export default function EnhancedNexusPrototype() {
   }, [selectedEntity.id, selectedEntity.name, selectedEntity.type]);
 
   const updateReportStatus = async (reportId: string, next: ReportStatus) => {
+    const note = actionNote.trim() || `Updated from Nexus console (${selectedEntity.name})`;
     setReportsByEntity((prev) => ({
       ...prev,
       [selectedEntity.id]: (prev[selectedEntity.id] || []).map((report) =>
-        report.id === reportId ? { ...report, status: next, eta: next === 'Resolved' ? 'Completed' : report.eta } : report
+        report.id === reportId
+          ? {
+              ...report,
+              status: next,
+              eta: next === 'Resolved' ? 'Completed' : report.eta,
+              assignedTo: assignedTo.trim() || report.assignedTo,
+              lastActionNote: note,
+            }
+          : report
       ),
     }));
 
@@ -523,7 +562,7 @@ export default function EnhancedNexusPrototype() {
         const response = await fetch(`${DPAL_API_BASE}/api/reports/${encodeURIComponent(reportId)}/ops-status`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: next, note: `Updated from Nexus console (${selectedEntity.name})` }),
+          body: JSON.stringify({ status: next, note }),
         });
         if (!response.ok) throw new Error(`ops_status_http_${response.status}`);
         setSyncMessage(`Status updated in DPAL database: ${reportId} → ${next}`);
@@ -533,10 +572,15 @@ export default function EnhancedNexusPrototype() {
       }
     }
 
+    logAction(`${reportId} changed to ${next}${assignedTo.trim() ? ` (assigned: ${assignedTo.trim()})` : ''}`);
+    setActionNote('');
     setActiveArea('audit');
   };
 
-  const openArea = (area: ActionArea) => setActiveArea(area);
+  const openArea = (area: ActionArea) => {
+    setActiveArea(area);
+    logAction(`Switched section to ${area}`);
+  };
   const profile = uniqueByType[selectedEntity.type];
   const infoNeeds = CATEGORY_INFO_NEEDS[selectedEntity.type] || [];
 
@@ -606,6 +650,7 @@ export default function EnhancedNexusPrototype() {
                   if (next) {
                     setSelectedEntityId(next.id);
                     setSelectedReportId(next.reports[0]?.id || '');
+                    logAction(`Changed category to ${type} (${next.name})`);
                   }
                 }}
                 style={{ ...styles.chip, ...(selectedType === type ? styles.chipActive : {}) }}
@@ -622,6 +667,7 @@ export default function EnhancedNexusPrototype() {
                 setSelectedEntityId(e.target.value);
                 const entity = ENTITIES.find((x) => x.id === e.target.value);
                 if (entity?.reports[0]) setSelectedReportId(entity.reports[0].id);
+                if (entity) logAction(`Switched entity to ${entity.name}`);
               }}
               style={styles.select}
             >
@@ -631,7 +677,7 @@ export default function EnhancedNexusPrototype() {
             </select>
             <div style={styles.chipWrap}>
               {DASHBOARD_VIEWS.map((item) => (
-                <button key={item} onClick={() => setView(item)} style={{ ...styles.chip, ...(view === item ? styles.chipActive : {}) }}>{item}</button>
+                <button key={item} onClick={() => { setView(item); logAction(`Dashboard view set to ${item}`); }} style={{ ...styles.chip, ...(view === item ? styles.chipActive : {}) }}>{item}</button>
               ))}
             </div>
           </div>
@@ -650,6 +696,7 @@ export default function EnhancedNexusPrototype() {
                   if (first) {
                     setSelectedEntityId(first.id);
                     setSelectedReportId(first.reports[0]?.id || '');
+                    logAction(`Opened category card: ${category.type}`);
                   }
                 }}
                 title={hasEntity ? `Open ${category.type}` : `${category.type} demo coming next`}
@@ -741,7 +788,7 @@ export default function EnhancedNexusPrototype() {
                 </div>
                 <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
                   {currentReports.map((r) => (
-                    <button key={r.id} onClick={() => setSelectedReportId(r.id)} style={{ ...styles.reportRow, ...(selectedReport?.id === r.id ? styles.reportSelected : {}) }}>
+                    <button key={r.id} onClick={() => { setSelectedReportId(r.id); logAction(`Selected report ${r.id}`); }} style={{ ...styles.reportRow, ...(selectedReport?.id === r.id ? styles.reportSelected : {}) }}>
                       <div style={{ fontWeight: 700 }}>{r.id} • {r.title}</div>
                       <div style={{ color: '#94a3b8', fontSize: 12 }}>{r.channel} • {r.location} • {r.severity} • ETA {r.eta}</div>
                       <div style={{ marginTop: 4, fontSize: 12 }}>Status: <strong>{r.status}</strong></div>
@@ -755,8 +802,22 @@ export default function EnhancedNexusPrototype() {
               <>
                 <h3 style={styles.cardTitle}>Action Center</h3>
                 <p style={styles.subtitle}>Assign teams, trigger field actions, and track completion from one place.</p>
+                <div style={styles.formGrid}>
+                  <input
+                    value={assignedTo}
+                    onChange={(e) => setAssignedTo(e.target.value)}
+                    placeholder="Assign to (e.g., Field Team Alpha)"
+                    style={styles.input}
+                  />
+                  <input
+                    value={actionNote}
+                    onChange={(e) => setActionNote(e.target.value)}
+                    placeholder="Action note (saved to history)"
+                    style={styles.input}
+                  />
+                </div>
                 <div style={styles.actionButtons}>
-                  <button style={styles.smallBtn} onClick={() => setActiveArea('reports')}>Back to Queue</button>
+                  <button style={styles.smallBtn} onClick={() => openArea('reports')}>Back to Queue</button>
                   <button style={styles.smallBtn} onClick={() => selectedReport && updateReportStatus(selectedReport.id, 'Investigating')}>Assign Team</button>
                   <button style={styles.smallBtn} onClick={() => selectedReport && updateReportStatus(selectedReport.id, 'Action Taken')}>Log Action Taken</button>
                   <button style={styles.smallBtnPrimary} onClick={() => selectedReport && updateReportStatus(selectedReport.id, 'Resolved')}>Mark Resolved</button>
@@ -776,11 +837,13 @@ export default function EnhancedNexusPrototype() {
             {activeArea === 'audit' && (
               <>
                 <h3 style={styles.cardTitle}>Audit Trail</h3>
-                <ul style={styles.auditList}>
-                  <li>09:01 - Report workflow updated from queue actions.</li>
-                  <li>08:58 - Entity view switched to {selectedEntity.name}.</li>
-                  <li>08:56 - Dashboard module toggled to {view} mode.</li>
-                </ul>
+                {auditEntries.length ? (
+                  <ul style={styles.auditList}>
+                    {auditEntries.map((entry) => <li key={entry}>{entry}</li>)}
+                  </ul>
+                ) : (
+                  <p style={styles.subtitle}>No actions yet. Use buttons in Reports/Dispatch and events will appear here.</p>
+                )}
               </>
             )}
           </div>
@@ -794,6 +857,8 @@ export default function EnhancedNexusPrototype() {
                 <div style={styles.valueStat}><span>Channel</span><strong>{selectedReport.channel}</strong></div>
                 <div style={styles.valueStat}><span>Severity</span><strong>{selectedReport.severity}</strong></div>
                 <div style={styles.valueStat}><span>ETA</span><strong>{selectedReport.eta}</strong></div>
+                <div style={styles.valueStat}><span>Assigned To</span><strong>{selectedReport.assignedTo || 'Unassigned'}</strong></div>
+                <div style={styles.valueStat}><span>Last Action Note</span><strong>{selectedReport.lastActionNote || '—'}</strong></div>
                 <p style={{ color: '#cbd5e1', marginTop: 12 }}>{selectedReport.summary}</p>
                 <div style={styles.actionButtons}>
                   <button style={styles.smallBtn} onClick={() => openArea('dispatch')}>Go to Action Center</button>
@@ -871,6 +936,8 @@ const styles: Record<string, React.CSSProperties> = {
   valueRow: { display: 'flex', gap: 12, flexWrap: 'wrap', color: '#cbd5e1', fontSize: 13 },
   reportRow: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: '#0f172a', display: 'grid', gap: 3, textAlign: 'left', cursor: 'pointer', color: '#e2e8f0' },
   reportSelected: { borderColor: '#2563eb', boxShadow: '0 0 0 1px #2563eb inset' },
+  formGrid: { display: 'grid', gap: 8, marginTop: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' },
+  input: { border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', borderRadius: 8, padding: '8px 10px', fontSize: 12 },
   actionButtons: { display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 },
   smallBtn: { border: '1px solid #475569', background: '#1e293b', color: '#e2e8f0', borderRadius: 8, padding: '6px 8px', fontSize: 12, cursor: 'pointer' },
   smallBtnPrimary: { border: '1px solid #16a34a', background: '#166534', color: '#fff', borderRadius: 8, padding: '6px 8px', fontSize: 12, cursor: 'pointer', fontWeight: 700 },
