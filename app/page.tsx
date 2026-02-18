@@ -63,6 +63,12 @@ type AiInsight = {
   provider?: string;
 };
 
+type CategoryPlaybook = {
+  operationalObjective: string;
+  workflowSteps: string[];
+  quickActions: Array<{ label: string; route: string; status: ReportStatus; note: string; openArea?: ActionArea }>;
+};
+
 const DASHBOARD_VIEWS: DashboardView[] = ['Executive', 'Operations', 'Risk & Liability', 'Public Portal'];
 const ACTION_AREAS: Array<{ key: ActionArea; label: string }> = [
   { key: 'reports', label: 'Reports Queue' },
@@ -447,6 +453,73 @@ const CATEGORY_INFO_NEEDS: Record<EntityType, Array<{ label: string; value: stri
   ],
 };
 
+const CATEGORY_PLAYBOOKS: Record<EntityType, CategoryPlaybook> = {
+  City: {
+    operationalObjective: 'Reduce citizen risk quickly through cross-department dispatch and closure accountability.',
+    workflowSteps: ['Intake validated', 'Department assigned', 'Field action logged', 'Citizen update sent', 'Case audited'],
+    quickActions: [
+      { label: 'Route to Public Works', route: 'Public Works', status: 'Investigating', note: 'Public works dispatch triggered.', openArea: 'dispatch' },
+      { label: 'Trigger Safety Alert', route: 'City Communications', status: 'Action Taken', note: 'Public safety alert draft requested.', openArea: 'analytics' },
+      { label: 'Close with Verification', route: 'City QA', status: 'Resolved', note: 'Closure verification completed with evidence.' },
+    ],
+  },
+  'County Government': {
+    operationalObjective: 'Coordinate county agencies and avoid handoff delays on high-impact cases.',
+    workflowSteps: ['Jurisdiction confirmed', 'Agency handoff', 'Joint action update', 'Compliance check', 'Audit close'],
+    quickActions: [
+      { label: 'Assign County Ops', route: 'County Ops Desk', status: 'Investigating', note: 'County operations assignment created.' },
+      { label: 'Escalate Inter-Agency', route: 'Emergency Mgmt', status: 'Action Taken', note: 'Inter-agency escalation initiated.' },
+      { label: 'Mark Resolved + Oversight', route: 'County Oversight', status: 'Resolved', note: 'Resolved and sent for oversight review.' },
+    ],
+  },
+  'Hospital Network': {
+    operationalObjective: 'Protect patient safety through rapid triage, compliance checks, and clinical follow-through.',
+    workflowSteps: ['Clinical triage', 'Compliance review', 'Corrective action', 'Safety signoff', 'Audit archive'],
+    quickActions: [
+      { label: 'Route to Clinical Risk', route: 'Clinical Risk Team', status: 'Investigating', note: 'Clinical risk review started.', openArea: 'dispatch' },
+      { label: 'Open Compliance Action', route: 'Compliance Office', status: 'Action Taken', note: 'Compliance corrective action logged.' },
+      { label: 'Finalize Patient Safety Case', route: 'Patient Safety Board', status: 'Resolved', note: 'Case closed after safety verification.' },
+    ],
+  },
+  'School District': {
+    operationalObjective: 'Protect students with fast intervention, counselor routing, and documented follow-up.',
+    workflowSteps: ['Incident screening', 'Counselor/principal assignment', 'Intervention plan', 'Family communication', 'Follow-up closure'],
+    quickActions: [
+      { label: 'Assign Counselor Team', route: 'Counselor Team', status: 'Investigating', note: 'Counselor assignment created.' },
+      { label: 'Log Intervention Action', route: 'School Admin', status: 'Action Taken', note: 'Intervention action recorded in case.' },
+      { label: 'Close with Follow-up', route: 'District Safety Office', status: 'Resolved', note: 'Follow-up complete and case closed.' },
+    ],
+  },
+  University: {
+    operationalObjective: 'Ensure governance-quality review for campus incidents with accountable outcomes.',
+    workflowSteps: ['Review intake', 'Investigate', 'Governance review', 'Decision recorded', 'Audit completion'],
+    quickActions: [
+      { label: 'Assign Student Affairs', route: 'Student Affairs', status: 'Investigating', note: 'Student Affairs review opened.' },
+      { label: 'Record Governance Action', route: 'Governance Office', status: 'Action Taken', note: 'Governance action note saved.' },
+      { label: 'Close with Counsel Signoff', route: 'Legal Counsel', status: 'Resolved', note: 'Legal signoff and closure completed.' },
+    ],
+  },
+  'Transit Agency': {
+    operationalObjective: 'Restore service reliability fast and reduce repeat disruptions by corridor.',
+    workflowSteps: ['Dispatch route response', 'Mitigate disruption', 'Service recovery', 'Root-cause note', 'Close and monitor'],
+    quickActions: [
+      { label: 'Route Dispatch Crew', route: 'Route Dispatch', status: 'Investigating', note: 'Dispatch team assigned.' },
+      { label: 'Log Service Mitigation', route: 'Infrastructure Team', status: 'Action Taken', note: 'Mitigation action entered.' },
+      { label: 'Close Recovery Case', route: 'Safety Command', status: 'Resolved', note: 'Service recovery verified and closed.' },
+    ],
+  },
+  'Police Department': { operationalObjective: 'Prioritize public safety investigations with evidence integrity.', workflowSteps: ['Triage', 'Assign unit', 'Action logged', 'Outcome validated', 'Audit'], quickActions: [{ label: 'Assign Investigations Unit', route: 'Investigations Unit', status: 'Investigating', note: 'Investigation assignment created.' }, { label: 'Log Evidence Action', route: 'Evidence Desk', status: 'Action Taken', note: 'Evidence handling action saved.' }, { label: 'Resolve and Archive', route: 'Patrol Supervisor', status: 'Resolved', note: 'Case resolved and archived.' }] },
+  'Fire Department': { operationalObjective: 'Move urgent hazards through dispatch and prevention follow-up.', workflowSteps: ['Dispatch', 'On-site action', 'Prevention check', 'Outcome logged', 'Audit'], quickActions: [{ label: 'Dispatch Station Team', route: 'Station Commander', status: 'Investigating', note: 'Station team dispatched.' }, { label: 'Record Prevention Action', route: 'Fire Prevention Unit', status: 'Action Taken', note: 'Prevention action logged.' }, { label: 'Close Incident', route: 'Emergency Ops', status: 'Resolved', note: 'Incident closure confirmed.' }] },
+  'Housing Authority': { operationalObjective: 'Resolve tenant risk quickly and track legal/compliance exposure.', workflowSteps: ['Triage tenant risk', 'Inspect', 'Remediation', 'Compliance check', 'Close'], quickActions: [{ label: 'Assign Inspection Unit', route: 'Inspection Unit', status: 'Investigating', note: 'Inspection assignment created.' }, { label: 'Log Remediation Action', route: 'Tenant Protection Desk', status: 'Action Taken', note: 'Remediation action registered.' }, { label: 'Close with Compliance Note', route: 'Legal Affairs', status: 'Resolved', note: 'Compliance closure note completed.' }] },
+  'Utilities Provider': { operationalObjective: 'Minimize outage impact through rapid dispatch and regulatory readiness.', workflowSteps: ['Outage triage', 'Crew dispatch', 'Restoration action', 'Regulatory note', 'Close'], quickActions: [{ label: 'Assign Grid Ops', route: 'Grid Ops Center', status: 'Investigating', note: 'Grid operations team assigned.' }, { label: 'Log Restoration Action', route: 'Field Crew Dispatch', status: 'Action Taken', note: 'Restoration action logged.' }, { label: 'Resolve and Report', route: 'Regulatory Desk', status: 'Resolved', note: 'Case resolved and regulatory note saved.' }] },
+  'Retail Chain': { operationalObjective: 'Reduce store risk and loss exposure with fast case handling.', workflowSteps: ['Store triage', 'Risk assignment', 'Mitigation', 'Manager signoff', 'Close'], quickActions: [{ label: 'Assign Store Manager', route: 'Store Manager', status: 'Investigating', note: 'Store manager assigned.' }, { label: 'Log Loss Prevention Action', route: 'Loss Prevention', status: 'Action Taken', note: 'Loss prevention step recorded.' }, { label: 'Resolve Store Case', route: 'Regional Risk Office', status: 'Resolved', note: 'Store case resolved and signed off.' }] },
+  'Logistics Company': { operationalObjective: 'Protect network throughput and safety through structured incident routing.', workflowSteps: ['Hub triage', 'Route assignment', 'Mitigation', 'Claims note', 'Close'], quickActions: [{ label: 'Assign Hub Ops Lead', route: 'Hub Ops Lead', status: 'Investigating', note: 'Hub ops lead assigned.' }, { label: 'Log Route Mitigation', route: 'Driver Safety Office', status: 'Action Taken', note: 'Route mitigation captured.' }, { label: 'Close Logistics Case', route: 'Claims Desk', status: 'Resolved', note: 'Case closed with claims review.' }] },
+  'Banking Group': { operationalObjective: 'Protect consumers with enforcement-grade triage and resolution tracking.', workflowSteps: ['Complaint triage', 'Risk review', 'Legal/referral action', 'Outcome recorded', 'Audit'], quickActions: [{ label: 'Assign Fraud Unit', route: 'Fraud Unit', status: 'Investigating', note: 'Fraud review initiated.' }, { label: 'Log Enforcement Action', route: 'Compliance Officer', status: 'Action Taken', note: 'Enforcement action documented.' }, { label: 'Close with Restitution Note', route: 'Branch Ops Lead', status: 'Resolved', note: 'Case closed with restitution tracking.' }] },
+  'Insurance Provider': { operationalObjective: 'Detect high-risk claim patterns and enforce integrity workflows.', workflowSteps: ['Intake score', 'Investigation', 'Legal referral', 'Outcome', 'Audit'], quickActions: [{ label: 'Assign Claims Supervisor', route: 'Claims Supervisor', status: 'Investigating', note: 'Claims review assigned.' }, { label: 'Log Fraud Signal Action', route: 'Fraud Analyst', status: 'Action Taken', note: 'Fraud signal action logged.' }, { label: 'Resolve Claim Integrity Case', route: 'Legal Review', status: 'Resolved', note: 'Integrity case closed with legal note.' }] },
+  'Telecom Provider': { operationalObjective: 'Restore service quality quickly and reduce repeat outage complaints.', workflowSteps: ['NOC triage', 'Field assignment', 'Fix action', 'Customer update', 'Close'], quickActions: [{ label: 'Assign NOC Team', route: 'Network NOC', status: 'Investigating', note: 'NOC assignment created.' }, { label: 'Log Service Restoration', route: 'Field Tech Dispatch', status: 'Action Taken', note: 'Service restoration action saved.' }, { label: 'Close Network Case', route: 'Customer Recovery Desk', status: 'Resolved', note: 'Network case closed and customer update sent.' }] },
+  'Airport Authority': { operationalObjective: 'Keep terminal and ground ops safe with rapid incident control.', workflowSteps: ['Ops triage', 'Ground dispatch', 'Safety action', 'Compliance check', 'Close'], quickActions: [{ label: 'Assign Terminal Ops', route: 'Terminal Ops', status: 'Investigating', note: 'Terminal ops assigned.' }, { label: 'Log Ground Safety Action', route: 'Ground Safety Unit', status: 'Action Taken', note: 'Ground safety action logged.' }, { label: 'Close Aviation Incident', route: 'Aviation Compliance', status: 'Resolved', note: 'Aviation case closed with compliance check.' }] },
+};
+
 export default function EnhancedNexusPrototype() {
   const [selectedType, setSelectedType] = useState<EntityType | 'All'>('All');
   const [selectedEntityId, setSelectedEntityId] = useState(ENTITIES[0].id);
@@ -611,6 +684,7 @@ export default function EnhancedNexusPrototype() {
 
   const profile = uniqueByType[selectedEntity.type];
   const infoNeeds = CATEGORY_INFO_NEEDS[selectedEntity.type] || [];
+  const playbook = CATEGORY_PLAYBOOKS[selectedEntity.type];
 
   const referralTargets = (report: Report): string[] => {
     const baseByType: Record<EntityType, string[]> = {
@@ -889,6 +963,39 @@ export default function EnhancedNexusPrototype() {
           </div>
         </section>
 
+        <section style={styles.playbookCard}>
+          <h3 style={styles.cardTitle}>Category Operations Console ({selectedEntity.type})</h3>
+          <p style={{ ...styles.subtitle, marginBottom: 10 }}>{playbook.operationalObjective}</p>
+
+          <div style={styles.playbookSteps}>
+            {playbook.workflowSteps.map((step, idx) => (
+              <div key={`${step}-${idx}`} style={styles.playStepItem}>
+                <span style={styles.playStepIndex}>{idx + 1}</span>
+                <span>{step}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ ...styles.referRow, marginTop: 10 }}>
+            {playbook.quickActions.map((action) => (
+              <button
+                key={`${selectedEntity.type}-${action.label}`}
+                style={styles.referBtnPrimary}
+                onClick={() => {
+                  if (!selectedReport) return;
+                  if (action.openArea) openArea(action.openArea);
+                  void updateReportStatus(selectedReport.id, action.status, {
+                    assignedTo: action.route,
+                    note: action.note,
+                  });
+                }}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
+        </section>
+
         {renderEntityLayout()}
 
         <section style={styles.navCard}>
@@ -1137,6 +1244,10 @@ const styles: Record<string, React.CSSProperties> = {
   infoNeedsCard: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)' },
   infoNeedsGrid: { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' },
   infoNeedItem: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: '#0f172a' },
+  playbookCard: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)' },
+  playbookSteps: { display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' },
+  playStepItem: { border: '1px solid #334155', borderRadius: 10, background: '#0f172a', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8, color: '#cbd5e1' },
+  playStepIndex: { width: 20, height: 20, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#1d4ed8', color: '#fff', fontSize: 11, fontWeight: 700 },
   uniqueLayoutCard: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)' },
   uniqueGrid3: { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))' },
   uniqueGrid2: { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' },
