@@ -141,6 +141,16 @@ const uniqueByType: Record<EntityType, { headline: string; color: string; channe
   'Utilities Provider': { headline: 'Service Continuity Channel', color: '#84cc16', channelFocus: ['Outage Mobile Alerts', 'Regulator Portal', 'Crew Dispatch Terminal'], layout: 'default' },
 };
 
+const CATEGORY_SHOWCASE: Array<{ type: EntityType; image: string; caption: string }> = [
+  { type: 'City', image: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=900&q=80', caption: 'City command and citizen intake operations' },
+  { type: 'Hospital Network', image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=900&q=80', caption: 'Clinical safety, compliance and incident review' },
+  { type: 'School District', image: 'https://images.unsplash.com/photo-1503676382389-4809596d5290?auto=format&fit=crop&w=900&q=80', caption: 'Campus welfare and parent transparency channel' },
+  { type: 'University', image: 'https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?auto=format&fit=crop&w=900&q=80', caption: 'Academic integrity and governance workflows' },
+  { type: 'Transit Agency', image: 'https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&w=900&q=80', caption: 'Route reliability and disruption response center' },
+  { type: 'Housing Authority', image: 'https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=900&q=80', caption: 'Tenant safety and structural risk management' },
+  { type: 'Utilities Provider', image: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=900&q=80', caption: 'Outage restoration and infrastructure oversight' },
+];
+
 export default function EnhancedNexusPrototype() {
   const [selectedType, setSelectedType] = useState<EntityType | 'All'>('All');
   const [selectedEntityId, setSelectedEntityId] = useState(ENTITIES[0].id);
@@ -274,6 +284,33 @@ export default function EnhancedNexusPrototype() {
               ))}
             </div>
           </div>
+        </section>
+
+        <section style={styles.showcaseGrid}>
+          {CATEGORY_SHOWCASE.map((category) => {
+            const hasEntity = ENTITIES.some((entity) => entity.type === category.type);
+            return (
+              <button
+                key={category.type}
+                style={{ ...styles.showcaseCard, opacity: hasEntity ? 1 : 0.7 }}
+                onClick={() => {
+                  setSelectedType(category.type);
+                  const first = ENTITIES.find((entity) => entity.type === category.type);
+                  if (first) {
+                    setSelectedEntityId(first.id);
+                    setSelectedReportId(first.reports[0]?.id || '');
+                  }
+                }}
+                title={hasEntity ? `Open ${category.type}` : `${category.type} demo coming next`}
+              >
+                <img src={category.image} alt={category.type} style={styles.showcaseImage} />
+                <div style={styles.showcaseBody}>
+                  <div style={styles.showcaseTag}>{category.type}</div>
+                  <div style={{ color: '#cbd5e1', fontSize: 13 }}>{category.caption}</div>
+                </div>
+              </button>
+            );
+          })}
         </section>
 
         <section style={styles.heroImageCard}>
@@ -420,6 +457,11 @@ const styles: Record<string, React.CSSProperties> = {
   chipActive: { borderColor: '#2563eb', background: '#1d4ed8', color: '#fff' },
   row: { display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' },
   select: { minWidth: 320, background: '#0f172a', color: '#e2e8f0', border: '1px solid #334155', borderRadius: 10, padding: '10px 12px' },
+  showcaseGrid: { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))' },
+  showcaseCard: { border: '1px solid #334155', borderRadius: 14, overflow: 'hidden', background: '#0b1220', cursor: 'pointer', padding: 0, textAlign: 'left' },
+  showcaseImage: { width: '100%', height: 110, objectFit: 'cover', display: 'block' },
+  showcaseBody: { padding: 10, display: 'grid', gap: 6 },
+  showcaseTag: { color: '#93c5fd', fontSize: 12, fontWeight: 800, textTransform: 'uppercase' },
   heroImageCard: { position: 'relative', borderRadius: 16, overflow: 'hidden', border: '1px solid #334155', minHeight: 220 },
   heroImage: { width: '100%', height: 260, objectFit: 'cover', display: 'block' },
   heroOverlay: { position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(2,6,23,0.2), rgba(2,6,23,0.75))', padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 8 },
