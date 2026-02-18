@@ -478,7 +478,26 @@ const CATEGORY_ICONS: Record<EntityType, string> = {
   'Airport Authority': '✈️',
 };
 
-function categoryImageForType(type: EntityType): string {
+const CATEGORY_REMOTE_IMAGES: Record<EntityType, string> = {
+  City: 'https://source.unsplash.com/1200x600/?city,skyline,government',
+  'County Government': 'https://source.unsplash.com/1200x600/?county,administration,public',
+  'Hospital Network': 'https://source.unsplash.com/1200x600/?hospital,medical,healthcare',
+  'School District': 'https://source.unsplash.com/1200x600/?school,classroom,education',
+  University: 'https://source.unsplash.com/1200x600/?university,campus,education',
+  'Transit Agency': 'https://source.unsplash.com/1200x600/?public,transport,metro',
+  'Police Department': 'https://source.unsplash.com/1200x600/?police,patrol,public-safety',
+  'Fire Department': 'https://source.unsplash.com/1200x600/?firefighter,fire-station,emergency',
+  'Housing Authority': 'https://source.unsplash.com/1200x600/?housing,apartment,community',
+  'Utilities Provider': 'https://source.unsplash.com/1200x600/?utilities,power-grid,infrastructure',
+  'Retail Chain': 'https://source.unsplash.com/1200x600/?retail,store,shopping',
+  'Logistics Company': 'https://source.unsplash.com/1200x600/?logistics,warehouse,delivery',
+  'Banking Group': 'https://source.unsplash.com/1200x600/?banking,finance,office',
+  'Insurance Provider': 'https://source.unsplash.com/1200x600/?insurance,documents,business',
+  'Telecom Provider': 'https://source.unsplash.com/1200x600/?telecom,network,tower',
+  'Airport Authority': 'https://source.unsplash.com/1200x600/?airport,terminal,aviation',
+};
+
+function categoryFallbackImage(type: EntityType): string {
   const icon = CATEGORY_ICONS[type] || '🧩';
   const svg = `
     <svg xmlns='http://www.w3.org/2000/svg' width='1200' height='600'>
@@ -495,6 +514,10 @@ function categoryImageForType(type: EntityType): string {
     </svg>
   `;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function categoryImageForType(type: EntityType): string {
+  return CATEGORY_REMOTE_IMAGES[type] || categoryFallbackImage(type);
 }
 
 const CATEGORY_INTAKE_FIELDS: Record<EntityType, IntakeField[]> = {
@@ -1508,7 +1531,15 @@ export default function EnhancedNexusPrototype() {
                   }}
                   title={hasEntity ? `Open ${category.type}` : `${category.type} demo coming next`}
                 >
-                  <img src={category.image} alt={category.type} style={styles.showcaseImage} />
+                  <img
+                    src={category.image}
+                    alt={category.type}
+                    style={styles.showcaseImage}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = categoryFallbackImage(category.type);
+                    }}
+                  />
                   <div style={styles.showcaseBody}>
                     <div style={styles.showcaseTag}>{category.type}</div>
                     <div style={{ color: '#cbd5e1', fontSize: 13 }}>{category.caption}</div>
@@ -1526,7 +1557,7 @@ export default function EnhancedNexusPrototype() {
             style={styles.heroImage}
             onError={(e) => {
               e.currentTarget.onerror = null;
-              e.currentTarget.src = categoryImageForType(selectedEntity.type);
+              e.currentTarget.src = categoryFallbackImage(selectedEntity.type);
             }}
           />
           <div style={styles.heroOverlay}>
@@ -1577,7 +1608,7 @@ export default function EnhancedNexusPrototype() {
               style={styles.playbookImage}
               onError={(e) => {
                 e.currentTarget.onerror = null;
-                e.currentTarget.src = categoryImageForType(selectedEntity.type);
+                e.currentTarget.src = categoryFallbackImage(selectedEntity.type);
               }}
             />
           </div>
