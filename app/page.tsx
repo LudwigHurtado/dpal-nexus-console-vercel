@@ -537,6 +537,8 @@ export default function EnhancedNexusPrototype() {
   const [aiLoadingFor, setAiLoadingFor] = useState<string>('');
   const [executiveBrief, setExecutiveBrief] = useState('');
   const [executiveBriefLoading, setExecutiveBriefLoading] = useState(false);
+  const [agentBusy, setAgentBusy] = useState(false);
+  const [agentLog, setAgentLog] = useState<string[]>([]);
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(ENTITIES.map((e) => e.type)))] as const, []);
   const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
@@ -564,6 +566,11 @@ export default function EnhancedNexusPrototype() {
   const logAction = (text: string) => {
     const stamp = new Date().toLocaleTimeString();
     setAuditEntries((prev) => [`${stamp} - ${text}`, ...prev].slice(0, 20));
+  };
+
+  const logAgent = (text: string) => {
+    const stamp = new Date().toLocaleTimeString();
+    setAgentLog((prev) => [`${stamp} - ${text}`, ...prev].slice(0, 12));
   };
 
   useEffect(() => {
@@ -687,6 +694,7 @@ export default function EnhancedNexusPrototype() {
   const profile = uniqueByType[selectedEntity.type];
   const infoNeeds = CATEGORY_INFO_NEEDS[selectedEntity.type] || [];
   const playbook = CATEGORY_PLAYBOOKS[selectedEntity.type];
+  const categoryVisual = CATEGORY_SHOWCASE.find((c) => c.type === selectedEntity.type);
 
   const referralTargets = (report: Report): string[] => {
     const baseByType: Record<EntityType, string[]> = {
@@ -834,6 +842,45 @@ export default function EnhancedNexusPrototype() {
     } finally {
       setAiLoadingFor('');
     }
+  };
+
+  const agentRouteAllOpenCases = async () => {
+    if (!currentReports.length) return;
+    setAgentBusy(true);
+    try {
+      const open = currentReports.filter((r) => r.status !== 'Resolved');
+      for (const report of open.slice(0, 8)) {
+        const target = referralTargets(report)[0] || 'Operations Desk';
+        await updateReportStatus(report.id, 'Investigating', {
+          assignedTo: target,
+          note: `Agent routed case to ${target} based on ${selectedEntity.type} playbook.`,
+        });
+      }
+      logAgent(`Routed ${Math.min(open.length, 8)} open cases to recommended owners.`);
+    } finally {
+      setAgentBusy(false);
+    }
+  };
+
+  const agentRunQuickAudit = () => {
+    const open = currentReports.filter((r) => r.status !== 'Resolved').length;
+    const high = currentReports.filter((r) => r.severity === 'High').length;
+    const unassigned = currentReports.filter((r) => !r.assignedTo).length;
+    logAgent(`Quick audit: ${open} open, ${high} high severity, ${unassigned} unassigned.`);
+    setActiveArea('audit');
+  };
+
+  const agentGenerateActionPlan = () => {
+    const actions = playbook.quickActions.slice(0, 3).map((a, i) => `${i + 1}. ${a.label} → ${a.route}`).join('\n');
+    setExecutiveBrief([
+      `Action Plan — ${selectedEntity.name}`,
+      `Objective: ${playbook.operationalObjective}`,
+      `Priority Steps:`,
+      actions,
+      `Current Queue: ${counts.total} cases, ${counts.byStatus.New} new, ${counts.byStatus.Investigating} investigating, ${counts.byStatus['Action Taken']} action taken.`,
+    ].join('\n'));
+    setActiveArea('analytics');
+    logAgent('Generated category action plan for executive briefing.');
   };
 
   const renderEntityLayout = () => {
@@ -1019,8 +1066,13 @@ export default function EnhancedNexusPrototype() {
         </section>
 
         <section style={styles.playbookCard}>
-          <h3 style={styles.cardTitle}>Category Operations Console ({selectedEntity.type})</h3>
-          <p style={{ ...styles.subtitle, marginBottom: 10 }}>{playbook.operationalObjective}</p>
+          <div style={styles.playbookTop}>
+            <div>
+              <h3 style={styles.cardTitle}>Category Operations Console ({selectedEntity.type})</h3>
+              <p style={{ ...styles.subtitle, marginBottom: 10 }}>{playbook.operationalObjective}</p>
+            </div>
+            {categoryVisual?.image && <img src={categoryVisual.image} alt={selectedEntity.type} style={styles.playbookImage} />}
+          </div>
 
           <div style={styles.playbookSteps}>
             {playbook.workflowSteps.map((step, idx) => (
@@ -1048,6 +1100,22 @@ export default function EnhancedNexusPrototype() {
                 {action.label}
               </button>
             ))}
+          </div>
+
+          <div style={styles.agentConsole}>
+            <div style={{ fontWeight: 800, marginBottom: 6 }}>Agent Mission Controls</div>
+            <div style={styles.referRow}>
+              <button style={styles.smallBtn} onClick={() => void agentRouteAllOpenCases()} disabled={agentBusy}>
+                {agentBusy ? 'Routing…' : 'Auto-Route Open Cases'}
+              </button>
+              <button style={styles.smallBtn} onClick={agentRunQuickAudit}>Run Quick Audit</button>
+              <button style={styles.smallBtnPrimary} onClick={agentGenerateActionPlan}>Generate Action Plan</button>
+            </div>
+            {agentLog.length > 0 && (
+              <ul style={styles.agentLogList}>
+                {agentLog.map((line) => <li key={line}>{line}</li>)}
+              </ul>
+            )}
           </div>
         </section>
 
@@ -1322,7 +1390,11 @@ const styles: Record<string, React.CSSProperties> = {
   infoNeedsGrid: { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' },
   infoNeedItem: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: '#0f172a' },
   playbookCard: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)' },
+  playbookTop: { display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'flex-start' },
+  playbookImage: { width: 180, height: 96, objectFit: 'cover', borderRadius: 10, border: '1px solid #334155' },
   playbookSteps: { display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' },
+  agentConsole: { border: '1px dashed #334155', borderRadius: 10, marginTop: 10, padding: 10, background: 'rgba(2,6,23,0.45)' },
+  agentLogList: { margin: '8px 0 0 16px', color: '#cbd5e1', fontSize: 12, lineHeight: 1.6 },
   playStepItem: { border: '1px solid #334155', borderRadius: 10, background: '#0f172a', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8, color: '#cbd5e1' },
   playStepIndex: { width: 20, height: 20, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#1d4ed8', color: '#fff', fontSize: 11, fontWeight: 700 },
   uniqueLayoutCard: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)' },
