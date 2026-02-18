@@ -69,6 +69,12 @@ type CategoryPlaybook = {
   quickActions: Array<{ label: string; route: string; status: ReportStatus; note: string; openArea?: ActionArea }>;
 };
 
+type IntakeField = {
+  key: string;
+  label: string;
+  placeholder: string;
+};
+
 const DASHBOARD_VIEWS: DashboardView[] = ['Executive', 'Operations', 'Risk & Liability', 'Public Portal'];
 const ACTION_AREAS: Array<{ key: ActionArea; label: string }> = [
   { key: 'reports', label: 'Reports Queue' },
@@ -453,8 +459,90 @@ const CATEGORY_INFO_NEEDS: Record<EntityType, Array<{ label: string; value: stri
   ],
 };
 
-const CATEGORY_PLAYBOOKS: Record<EntityType, CategoryPlaybook> = {
-  City: {
+const CATEGORY_INTAKE_FIELDS: Record<EntityType, IntakeField[]> = {
+  City: [
+    { key: 'district', label: 'District / Zone', placeholder: 'e.g., Downtown / Zone 4' },
+    { key: 'department', label: 'Impacted Department', placeholder: 'e.g., Public Works / Transport' },
+    { key: 'publicImpact', label: 'Public Impact', placeholder: 'e.g., traffic hazard, safety risk' },
+  ],
+  'County Government': [
+    { key: 'agency', label: 'Agency Involved', placeholder: 'e.g., County Health, Utilities' },
+    { key: 'jurisdiction', label: 'Jurisdiction Detail', placeholder: 'e.g., Unincorporated Area' },
+    { key: 'riskWindow', label: 'Risk Window', placeholder: 'e.g., storm period, school hours' },
+  ],
+  'Hospital Network': [
+    { key: 'facility', label: 'Facility / Unit', placeholder: 'e.g., ER, ICU, OR-3' },
+    { key: 'patientSafetyClass', label: 'Safety Class', placeholder: 'e.g., med error, delay, sterile risk' },
+    { key: 'complianceTag', label: 'Compliance Tag', placeholder: 'e.g., protocol deviation' },
+  ],
+  'School District': [
+    { key: 'campus', label: 'Campus', placeholder: 'e.g., North High' },
+    { key: 'area', label: 'Area', placeholder: 'e.g., hallway, cafeteria, bus zone' },
+    { key: 'studentSafetyTag', label: 'Safety Tag', placeholder: 'e.g., bullying, facilities, supervision' },
+  ],
+  University: [
+    { key: 'faculty', label: 'Faculty / Department', placeholder: 'e.g., Engineering / Student Affairs' },
+    { key: 'governanceType', label: 'Governance Type', placeholder: 'e.g., integrity, conduct, policy' },
+    { key: 'reviewBoard', label: 'Review Board', placeholder: 'e.g., Academic Integrity Office' },
+  ],
+  'Transit Agency': [
+    { key: 'route', label: 'Route / Line', placeholder: 'e.g., Line A / Route 17' },
+    { key: 'station', label: 'Station / Segment', placeholder: 'e.g., Central Station' },
+    { key: 'serviceImpact', label: 'Service Impact', placeholder: 'e.g., delay, outage, safety' },
+  ],
+  'Police Department': [
+    { key: 'precinct', label: 'Precinct / Unit', placeholder: 'e.g., Precinct 5' },
+    { key: 'incidentClass', label: 'Incident Class', placeholder: 'e.g., evidence, response, conduct' },
+    { key: 'priorityLevel', label: 'Priority Level', placeholder: 'e.g., P1 / P2 / P3' },
+  ],
+  'Fire Department': [
+    { key: 'station', label: 'Station', placeholder: 'e.g., Station 12' },
+    { key: 'hazardClass', label: 'Hazard Class', placeholder: 'e.g., fire risk, code issue' },
+    { key: 'responseNeed', label: 'Response Need', placeholder: 'e.g., dispatch, prevention, inspection' },
+  ],
+  'Housing Authority': [
+    { key: 'property', label: 'Property / Block', placeholder: 'e.g., Building C' },
+    { key: 'tenantRisk', label: 'Tenant Risk', placeholder: 'e.g., structural, utility, safety' },
+    { key: 'legalExposure', label: 'Legal Exposure', placeholder: 'e.g., low/medium/high' },
+  ],
+  'Utilities Provider': [
+    { key: 'serviceType', label: 'Service Type', placeholder: 'e.g., power/water/gas' },
+    { key: 'nodeOrZone', label: 'Grid Node / Zone', placeholder: 'e.g., Node TX-14' },
+    { key: 'customerImpactBand', label: 'Customer Impact Band', placeholder: 'e.g., 1-100 / 100-1k / 1k+' },
+  ],
+  'Retail Chain': [
+    { key: 'storeId', label: 'Store ID', placeholder: 'e.g., Store #1142' },
+    { key: 'riskType', label: 'Risk Type', placeholder: 'e.g., safety, theft, ops disruption' },
+    { key: 'shiftWindow', label: 'Shift Window', placeholder: 'e.g., evening peak' },
+  ],
+  'Logistics Company': [
+    { key: 'hub', label: 'Hub / Depot', placeholder: 'e.g., Memphis Hub' },
+    { key: 'routeSegment', label: 'Route Segment', placeholder: 'e.g., last-mile R7' },
+    { key: 'throughputImpact', label: 'Throughput Impact', placeholder: 'e.g., low/medium/high' },
+  ],
+  'Banking Group': [
+    { key: 'institution', label: 'Institution / Branch', placeholder: 'e.g., Branch 014' },
+    { key: 'productType', label: 'Product Type', placeholder: 'e.g., ACH, card, lending' },
+    { key: 'consumerHarmBand', label: 'Consumer Harm Band', placeholder: 'e.g., low/medium/high' },
+  ],
+  'Insurance Provider': [
+    { key: 'claimType', label: 'Claim Type', placeholder: 'e.g., property, auto, health' },
+    { key: 'fraudSignal', label: 'Fraud Signal', placeholder: 'e.g., repeat contractor, docs mismatch' },
+    { key: 'lossBand', label: 'Loss Band', placeholder: 'e.g., <1k / 1k-10k / 10k+' },
+  ],
+  'Telecom Provider': [
+    { key: 'networkArea', label: 'Network Area', placeholder: 'e.g., Metro Core' },
+    { key: 'outageType', label: 'Outage Type', placeholder: 'e.g., tower, fiber, congestion' },
+    { key: 'enterpriseRisk', label: 'Enterprise Risk', placeholder: 'e.g., SLA at risk' },
+  ],
+  'Airport Authority': [
+    { key: 'terminal', label: 'Terminal / Zone', placeholder: 'e.g., Terminal B Gate 12' },
+    { key: 'opsType', label: 'Ops Type', placeholder: 'e.g., ground safety, crowding' },
+    { key: 'aviationImpact', label: 'Aviation Impact', placeholder: 'e.g., delay, compliance, safety' },
+  ],
+};
+
+const CATEGORY_PLAYBOOKS: Record<EntityType, CategoryPlaybook> = {  City: {
     operationalObjective: 'Reduce citizen risk quickly through cross-department dispatch and closure accountability.',
     workflowSteps: ['Intake validated', 'Department assigned', 'Field action logged', 'Citizen update sent', 'Case audited'],
     quickActions: [
@@ -546,6 +634,7 @@ export default function EnhancedNexusPrototype() {
   const [newItemSeverity, setNewItemSeverity] = useState<Severity>('Moderate');
   const [newItemChannel, setNewItemChannel] = useState<Report['channel']>('App');
   const [newItemLocation, setNewItemLocation] = useState('');
+  const [newItemFields, setNewItemFields] = useState<Record<string, string>>({});
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(ENTITIES.map((e) => e.type)))] as const, []);
   const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
@@ -599,6 +688,14 @@ export default function EnhancedNexusPrototype() {
       // ignore persistence errors
     }
   }, [reportsByEntity, auditEntries]);
+
+  useEffect(() => {
+    const base: Record<string, string> = {};
+    (CATEGORY_INTAKE_FIELDS[selectedEntity.type] || []).forEach((f) => {
+      base[f.key] = '';
+    });
+    setNewItemFields(base);
+  }, [selectedEntity.type]);
 
   useEffect(() => {
     if (!apiBase) return;
@@ -720,7 +817,7 @@ export default function EnhancedNexusPrototype() {
             entityType: selectedEntity.type,
             entityName: selectedEntity.name,
             opsStatus: 'New',
-            structuredData: { source: 'nexus_console' },
+            structuredData: { source: 'nexus_console', intakeFields: newItemFields },
           }),
         });
         if (!res.ok) throw new Error(`anchor_http_${res.status}`);
@@ -737,6 +834,7 @@ export default function EnhancedNexusPrototype() {
     setNewItemLocation('');
     setNewItemSeverity('Moderate');
     setNewItemChannel('App');
+    setNewItemFields((prev) => Object.fromEntries(Object.keys(prev).map((k) => [k, ''])));
   };
 
   const testIntegration = async () => {
@@ -775,6 +873,7 @@ export default function EnhancedNexusPrototype() {
   const profile = uniqueByType[selectedEntity.type];
   const infoNeeds = CATEGORY_INFO_NEEDS[selectedEntity.type] || [];
   const playbook = CATEGORY_PLAYBOOKS[selectedEntity.type];
+  const intakeFields = CATEGORY_INTAKE_FIELDS[selectedEntity.type] || [];
   const categoryVisual = CATEGORY_SHOWCASE.find((c) => c.type === selectedEntity.type);
 
   const referralTargets = (report: Report): string[] => {
@@ -1249,6 +1348,24 @@ export default function EnhancedNexusPrototype() {
                     </select>
                   </div>
                   <input value={newItemSummary} onChange={(e) => setNewItemSummary(e.target.value)} placeholder="Summary / notes" style={{ ...styles.input, width: '100%', marginTop: 8 }} />
+
+                  {intakeFields.length > 0 && (
+                    <>
+                      <div style={{ ...styles.panelLabel, marginTop: 8 }}>Category-specific intake fields</div>
+                      <div style={styles.formGrid}>
+                        {intakeFields.map((field) => (
+                          <input
+                            key={`intake-${field.key}`}
+                            value={newItemFields[field.key] || ''}
+                            onChange={(e) => setNewItemFields((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                            placeholder={`${field.label} — ${field.placeholder}`}
+                            style={styles.input}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+
                   <div style={styles.actionButtons}>
                     <button style={styles.smallBtnPrimary} onClick={() => void createNewItem()}>Create & Save</button>
                   </div>
