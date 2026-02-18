@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 type EntityType =
   | 'City'
@@ -58,6 +58,8 @@ const ACTION_AREAS: Array<{ key: ActionArea; label: string }> = [
   { key: 'analytics', label: 'Analytics' },
   { key: 'audit', label: 'Audit Trail' },
 ];
+
+const DPAL_API_BASE = (process.env.NEXT_PUBLIC_DPAL_API_BASE || '').trim();
 
 const ENTITIES: Entity[] = [
   {
@@ -341,6 +343,8 @@ export default function EnhancedNexusPrototype() {
   const [activeArea, setActiveArea] = useState<ActionArea>('reports');
   const [reportsByEntity, setReportsByEntity] = useState<Record<string, Report[]>>(Object.fromEntries(ENTITIES.map((e) => [e.id, e.reports])));
   const [selectedReportId, setSelectedReportId] = useState<string>(ENTITIES[0].reports[0].id);
+  const [syncMessage, setSyncMessage] = useState<string>(DPAL_API_BASE ? 'Connected to DPAL API' : 'Using demo data (set NEXT_PUBLIC_DPAL_API_BASE)');
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(ENTITIES.map((e) => e.type)))] as const, []);
   const filteredEntities = useMemo(() => (selectedType === 'All' ? ENTITIES : ENTITIES.filter((e) => e.type === selectedType)), [selectedType]);
@@ -359,13 +363,77 @@ export default function EnhancedNexusPrototype() {
     return { total, byStatus };
   }, [currentReports]);
 
-  const updateReportStatus = (reportId: string, next: ReportStatus) => {
+  useEffect(() => {
+    if (!DPAL_API_BASE) return;
+
+    const fetchLiveReports = async () => {
+      try {
+        setIsSyncing(true);
+        setSyncMessage('Syncing live reports from DPAL API...');
+
+        const params = new URLSearchParams({
+          limit: '60',
+          entityType: selectedEntity.type,
+          entityName: selectedEntity.name,
+        });
+
+        const response = await fetch(`${DPAL_API_BASE}/api/reports/feed?${params.toString()}`);
+        if (!response.ok) throw new Error(`feed_http_${response.status}`);
+
+        const json = await response.json();
+        const items = Array.isArray(json?.items) ? json.items : [];
+
+        const mapped: Report[] = items.map((item: any) => ({
+          id: String(item.reportId || `RPT-${Math.random().toString(36).slice(2, 8)}`),
+          title: String(item.title || 'Untitled report'),
+          severity: (['Low', 'Moderate', 'High'].includes(String(item.severity)) ? String(item.severity) : 'Moderate') as Severity,
+          status: (['New', 'Investigating', 'Action Taken', 'Resolved'].includes(String(item.opsStatus)) ? String(item.opsStatus) : 'New') as ReportStatus,
+          location: String(item.location || 'Unknown'),
+          eta: String(item.opsStatus === 'Resolved' ? 'Completed' : 'TBD'),
+          channel: (['App', 'WhatsApp', 'Web Portal', 'Hotline', 'Field Team'].includes(String(item.channel)) ? String(item.channel) : 'Web Portal') as Report['channel'],
+          summary: String(item.description || 'No summary provided.'),
+        }));
+
+        if (mapped.length) {
+          setReportsByEntity((prev) => ({ ...prev, [selectedEntity.id]: mapped }));
+          setSelectedReportId(mapped[0].id);
+        }
+
+        setSyncMessage(mapped.length ? `Live sync active: ${mapped.length} reports loaded` : 'Live sync active: no matching reports yet');
+      } catch (error) {
+        console.error(error);
+        setSyncMessage('Live sync failed; showing latest local/demo state');
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+
+    void fetchLiveReports();
+  }, [selectedEntity.id, selectedEntity.name, selectedEntity.type]);
+
+  const updateReportStatus = async (reportId: string, next: ReportStatus) => {
     setReportsByEntity((prev) => ({
       ...prev,
       [selectedEntity.id]: (prev[selectedEntity.id] || []).map((report) =>
         report.id === reportId ? { ...report, status: next, eta: next === 'Resolved' ? 'Completed' : report.eta } : report
       ),
     }));
+
+    if (DPAL_API_BASE) {
+      try {
+        const response = await fetch(`${DPAL_API_BASE}/api/reports/${encodeURIComponent(reportId)}/ops-status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: next, note: `Updated from Nexus console (${selectedEntity.name})` }),
+        });
+        if (!response.ok) throw new Error(`ops_status_http_${response.status}`);
+        setSyncMessage(`Status updated in DPAL database: ${reportId} → ${next}`);
+      } catch (error) {
+        console.error(error);
+        setSyncMessage(`Could not persist ${reportId} to API; local UI updated`);
+      }
+    }
+
     setActiveArea('audit');
   };
 
@@ -531,12 +599,15 @@ export default function EnhancedNexusPrototype() {
         <section style={styles.railwayCard}>
           <div>
             <div style={styles.panelLabel}>Railway Deployment Readiness</div>
-            <div style={{ color: '#cbd5e1', marginTop: 4 }}>UI is now structured so each category/entity can map to a Railway-backed API route in DPAL.</div>
+            <div style={{ color: '#cbd5e1', marginTop: 4 }}>UI is now wired for live DPAL report sync + action persistence.</div>
+            <div style={{ color: '#94a3b8', marginTop: 4, fontSize: 12 }}>
+              {isSyncing ? 'Sync in progress...' : syncMessage}
+            </div>
           </div>
           <div style={styles.channelWrap}>
-            <span style={styles.channelChip}>/api/entities/:id</span>
-            <span style={styles.channelChip}>/api/reports/:id/actions</span>
-            <span style={styles.channelChip}>/api/dashboard/:type</span>
+            <span style={styles.channelChip}>/api/reports/feed</span>
+            <span style={styles.channelChip}>/api/reports/:id/ops-status</span>
+            <span style={styles.channelChip}>NEXT_PUBLIC_DPAL_API_BASE</span>
           </div>
         </section>
 
