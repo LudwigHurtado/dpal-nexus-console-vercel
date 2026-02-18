@@ -675,6 +675,15 @@ export default function EnhancedNexusPrototype() {
   const [newItemFields, setNewItemFields] = useState<Record<string, string>>({});
   const [mockLinkResponse, setMockLinkResponse] = useState('');
   const [interactionMessage, setInteractionMessage] = useState('');
+  const [endpointStatus, setEndpointStatus] = useState<Record<string, 'ok' | 'fail' | 'idle'>>({
+    health: 'idle',
+    reportsFeed: 'idle',
+    createItem: 'idle',
+    updateStatus: 'idle',
+    aiAsk: 'idle',
+    aiTriage: 'idle',
+    aiSimilar: 'idle',
+  });
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
   const [voiceTarget, setVoiceTarget] = useState<'actionNote' | 'newSummary'>('actionNote');
@@ -947,13 +956,93 @@ export default function EnhancedNexusPrototype() {
       setSyncMessage('Set API base URL first.');
       return;
     }
+
+    const probe = async (key: keyof typeof endpointStatus, run: () => Promise<Response>) => {
+      try {
+        const res = await run();
+        setEndpointStatus((prev) => ({ ...prev, [key]: res.ok ? 'ok' : 'fail' }));
+        return res.ok;
+      } catch {
+        setEndpointStatus((prev) => ({ ...prev, [key]: 'fail' }));
+        return false;
+      }
+    };
+
     try {
       setIsSyncing(true);
-      const healthRes = await fetch(`${apiBase}/health`);
-      const reportsRes = await fetch(`${apiBase}/api/reports/feed?limit=1`);
-      if (!healthRes.ok || !reportsRes.ok) throw new Error(`health:${healthRes.status} reports:${reportsRes.status}`);
-      setSyncMessage('Railway/Mongo integration OK: health + reports feed reachable.');
-      logAction('Integration check passed');
+      setEndpointStatus({
+        health: 'idle',
+        reportsFeed: 'idle',
+        createItem: 'idle',
+        updateStatus: 'idle',
+        aiAsk: 'idle',
+        aiTriage: 'idle',
+        aiSimilar: 'idle',
+      });
+
+      const sample = currentReports[0] || {
+        id: 'PING-001',
+        title: 'Integration test case',
+        summary: 'Integration test summary',
+        severity: 'Moderate',
+        location: selectedEntity.region,
+        channel: 'App',
+      };
+
+      const checks = await Promise.all([
+        probe('health', () => fetch(`${apiBase}/health`)),
+        probe('reportsFeed', () => fetch(`${apiBase}/api/reports/feed?limit=1`)),
+        probe('createItem', () =>
+          fetch(`${apiBase}/api/reports/anchor`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              reportId: `PING-${Date.now()}`,
+              title: 'Connectivity probe',
+              description: 'Endpoint connectivity probe from Nexus',
+              category: selectedEntity.type,
+              location: selectedEntity.region,
+              severity: 'Low',
+              channel: 'App',
+              entityType: selectedEntity.type,
+              entityName: selectedEntity.name,
+              opsStatus: 'New',
+            }),
+          })
+        ),
+        probe('updateStatus', () =>
+          fetch(`${apiBase}/api/reports/${encodeURIComponent(sample.id)}/ops-status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'Investigating', note: 'Integration status probe' }),
+          })
+        ),
+        probe('aiAsk', () =>
+          fetch(`${apiBase}/api/ai/ask`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: 'Return one short sentence: integration ok.' }),
+          })
+        ),
+        probe('aiTriage', () =>
+          fetch(`${apiBase}/api/ai/triage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenantType: selectedEntity.type, tenantName: selectedEntity.name, category: 'Integration', report: sample }),
+          })
+        ),
+        probe('aiSimilar', () =>
+          fetch(`${apiBase}/api/ai/similar-cases`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ report: sample, candidates: currentReports.slice(0, 3) }),
+          })
+        ),
+      ]);
+
+      const okCount = checks.filter(Boolean).length;
+      setSyncMessage(`Integration check complete: ${okCount}/7 endpoints healthy.`);
+      logAction(`Integration check completed (${okCount}/7)`);
     } catch (error) {
       console.error(error);
       setSyncMessage('Integration check failed. Verify Railway URL, CORS, and Mongo connectivity.');
@@ -1552,6 +1641,17 @@ export default function EnhancedNexusPrototype() {
             <span style={styles.channelChip}>/api/reports/anchor</span>
             <span style={styles.channelChip}>/api/reports/:id/ops-status</span>
           </div>
+
+          <div style={styles.endpointGrid}>
+            {Object.entries(endpointStatus).map(([key, status]) => (
+              <div key={key} style={styles.endpointItem}>
+                <span>{key}</span>
+                <span style={{ color: status === 'ok' ? '#22c55e' : status === 'fail' ? '#ef4444' : '#94a3b8', fontWeight: 700 }}>
+                  {status.toUpperCase()}
+                </span>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section style={styles.twoCol}>
@@ -1882,6 +1982,8 @@ const styles: Record<string, React.CSSProperties> = {
   miniTile: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: '#0f172a' },
   navCard: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: 'rgba(11,18,32,0.86)', display: 'flex', gap: 8, flexWrap: 'wrap' },
   railwayCard: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: 'rgba(11,18,32,0.86)', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' },
+  endpointGrid: { display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', width: '100%' },
+  endpointItem: { border: '1px solid #334155', borderRadius: 8, padding: '6px 8px', display: 'flex', justifyContent: 'space-between', background: '#0f172a', fontSize: 12, color: '#cbd5e1' },
   interactionBanner: { border: '1px solid #2563eb', borderRadius: 10, padding: '8px 10px', background: 'rgba(37,99,235,0.12)', color: '#dbeafe', fontSize: 13 },
   voicePanel: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: 'rgba(11,18,32,0.86)', display: 'grid', gap: 8 },
   sectionBtn: { border: '1px solid #334155', background: '#0f172a', color: '#cbd5e1', borderRadius: 9, padding: '8px 10px', cursor: 'pointer', fontWeight: 700 },
