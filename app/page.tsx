@@ -53,6 +53,16 @@ type Entity = {
   reports: Report[];
 };
 
+type AiInsight = {
+  severitySuggested: 'Low' | 'Moderate' | 'High';
+  routeTo: string;
+  slaHours: number;
+  rationale: string;
+  nextActions: Array<{ label: string; status: ReportStatus; note: string }>;
+  similar?: Array<{ id: string; title: string; severity: string; score: number }>;
+  provider?: string;
+};
+
 const DASHBOARD_VIEWS: DashboardView[] = ['Executive', 'Operations', 'Risk & Liability', 'Public Portal'];
 const ACTION_AREAS: Array<{ key: ActionArea; label: string }> = [
   { key: 'reports', label: 'Reports Queue' },
@@ -450,6 +460,8 @@ export default function EnhancedNexusPrototype() {
   const [actionNote, setActionNote] = useState('');
   const [auditEntries, setAuditEntries] = useState<string[]>([]);
   const [showAllCategories, setShowAllCategories] = useState(false);
+  const [aiByReportId, setAiByReportId] = useState<Record<string, AiInsight>>({});
+  const [aiLoadingFor, setAiLoadingFor] = useState<string>('');
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(ENTITIES.map((e) => e.type)))] as const, []);
   const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
@@ -623,6 +635,84 @@ export default function EnhancedNexusPrototype() {
     const base = baseByType[selectedEntity.type] || ['Operations Desk', 'Risk Team', 'Legal Team'];
     if (report.severity === 'High') return [base[1], base[0], base[2]];
     return base;
+  };
+
+  const localAiInsight = (report: Report): AiInsight => {
+    const high = report.severity === 'High' || /urgent|critical|threat|hazard/i.test(report.title + ' ' + report.summary);
+    const routeTo = referralTargets(report)[0] || 'Operations Desk';
+    return {
+      severitySuggested: high ? 'High' : report.severity,
+      routeTo,
+      slaHours: high ? 2 : report.severity === 'Moderate' ? 8 : 24,
+      rationale: high
+        ? 'High-risk language and severity indicators found. Immediate triage and assignment recommended.'
+        : 'Moderate operational risk profile based on current report fields.',
+      nextActions: [
+        { label: `Assign to ${routeTo}`, status: 'Investigating', note: `Route to ${routeTo} and start review.` },
+        { label: 'Log mitigation action', status: 'Action Taken', note: 'Capture mitigation step, owner, and evidence references.' },
+        { label: 'Close after verification', status: 'Resolved', note: 'Resolve only after SLA checks and closure notes are complete.' },
+      ],
+      similar: (currentReports || [])
+        .filter((r) => r.id !== report.id)
+        .slice(0, 3)
+        .map((r) => ({ id: r.id, title: r.title, severity: r.severity, score: 0.5 })),
+      provider: 'local-heuristic',
+    };
+  };
+
+  const runAiForReport = async (report: Report) => {
+    setAiLoadingFor(report.id);
+    try {
+      if (!DPAL_API_BASE) {
+        setAiByReportId((prev) => ({ ...prev, [report.id]: localAiInsight(report) }));
+        return;
+      }
+
+      const triageRes = await fetch(`${DPAL_API_BASE}/api/ai/triage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantType: selectedEntity.type,
+          tenantName: selectedEntity.name,
+          category: 'Operations Report',
+          report,
+        }),
+      });
+
+      if (!triageRes.ok) throw new Error(`triage_http_${triageRes.status}`);
+      const triageJson = await triageRes.json();
+
+      const similarRes = await fetch(`${DPAL_API_BASE}/api/ai/similar-cases`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          report,
+          candidates: (currentReports || []).filter((r) => r.id !== report.id),
+        }),
+      });
+
+      let similar: AiInsight['similar'] = [];
+      if (similarRes.ok) {
+        const similarJson = await similarRes.json();
+        similar = Array.isArray(similarJson?.similar) ? similarJson.similar : [];
+      }
+
+      const insight: AiInsight = {
+        ...localAiInsight(report),
+        ...(triageJson?.triage || {}),
+        similar,
+        provider: triageJson?.provider || 'api',
+      };
+
+      setAiByReportId((prev) => ({ ...prev, [report.id]: insight }));
+      logAction(`AI analysis completed for ${report.id}`);
+    } catch (error) {
+      console.error(error);
+      setAiByReportId((prev) => ({ ...prev, [report.id]: localAiInsight(report) }));
+      logAction(`AI fallback used for ${report.id}`);
+    } finally {
+      setAiLoadingFor('');
+    }
   };
 
   const renderEntityLayout = () => {
@@ -936,6 +1026,53 @@ export default function EnhancedNexusPrototype() {
                   </div>
                 </div>
 
+                <div style={styles.aiCard}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontWeight: 800 }}>AI Copilot</div>
+                    <button style={styles.smallBtn} onClick={() => void runAiForReport(selectedReport)}>
+                      {aiLoadingFor === selectedReport.id ? 'Analyzing…' : 'Run AI Analysis'}
+                    </button>
+                  </div>
+
+                  {aiByReportId[selectedReport.id] && (
+                    <>
+                      <div style={styles.aiGrid}>
+                        <div style={styles.aiItem}><span>Suggested Severity</span><strong>{aiByReportId[selectedReport.id].severitySuggested}</strong></div>
+                        <div style={styles.aiItem}><span>Route To</span><strong>{aiByReportId[selectedReport.id].routeTo}</strong></div>
+                        <div style={styles.aiItem}><span>SLA Target</span><strong>{aiByReportId[selectedReport.id].slaHours}h</strong></div>
+                        <div style={styles.aiItem}><span>Provider</span><strong>{aiByReportId[selectedReport.id].provider || 'ai'}</strong></div>
+                      </div>
+
+                      <p style={{ color: '#cbd5e1', marginTop: 8 }}>{aiByReportId[selectedReport.id].rationale}</p>
+
+                      <div style={styles.referRow}>
+                        {aiByReportId[selectedReport.id].nextActions.map((a) => (
+                          <button
+                            key={`${selectedReport.id}-${a.label}`}
+                            style={styles.referBtnPrimary}
+                            onClick={() => void updateReportStatus(selectedReport.id, a.status, { assignedTo: aiByReportId[selectedReport.id].routeTo, note: a.note })}
+                          >
+                            {a.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {!!aiByReportId[selectedReport.id].similar?.length && (
+                        <div style={{ marginTop: 10 }}>
+                          <div style={{ fontSize: 12, color: '#93c5fd', marginBottom: 4 }}>Similar Cases</div>
+                          <div style={{ display: 'grid', gap: 6 }}>
+                            {aiByReportId[selectedReport.id].similar?.map((s) => (
+                              <button key={`${selectedReport.id}-sim-${s.id}`} style={styles.similarBtn} onClick={() => setSelectedReportId(s.id)}>
+                                {s.id} • {s.title} ({Math.round((s.score || 0) * 100)}%)
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
                 <div style={styles.actionButtons}>
                   <button style={styles.smallBtn} onClick={() => openArea('dispatch')}>Go to Action Center</button>
                   <button style={styles.smallBtn} onClick={() => openArea('audit')}>Open Audit Trail</button>
@@ -1020,6 +1157,10 @@ const styles: Record<string, React.CSSProperties> = {
   referBtn: { border: '1px solid #334155', background: '#111827', color: '#cbd5e1', borderRadius: 999, padding: '4px 9px', fontSize: 11, cursor: 'pointer' },
   referBtnPrimary: { border: '1px solid #2563eb', background: '#1d4ed8', color: '#fff', borderRadius: 999, padding: '4px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 700 },
   recommendCard: { border: '1px dashed #334155', borderRadius: 10, padding: 10, marginTop: 10, background: 'rgba(15,23,42,0.55)' },
+  aiCard: { border: '1px solid #334155', borderRadius: 10, padding: 10, marginTop: 10, background: 'rgba(2,6,23,0.45)' },
+  aiGrid: { display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', marginTop: 8 },
+  aiItem: { border: '1px solid #334155', borderRadius: 8, padding: '6px 8px', display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#cbd5e1' },
+  similarBtn: { border: '1px solid #334155', background: '#0b1220', color: '#cbd5e1', borderRadius: 8, padding: '6px 8px', textAlign: 'left', cursor: 'pointer', fontSize: 12 },
   formGrid: { display: 'grid', gap: 8, marginTop: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' },
   input: { border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0', borderRadius: 8, padding: '8px 10px', fontSize: 12 },
   actionButtons: { display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 },
