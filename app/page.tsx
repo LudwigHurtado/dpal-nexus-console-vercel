@@ -1755,12 +1755,25 @@ export default function EnhancedNexusPrototype() {
             </div>
             <div style={{ fontSize: 11, color: '#93c5fd', fontWeight: 700, marginBottom: 8 }}>Risk Alerts</div>
             <div style={{ display: 'grid', gap: 10 }}>
-              {aiAlerts.map((alert, i) => (
-                <div key={i} style={{ borderLeft: `2px solid ${i === 0 ? '#ef4444' : '#334155'}`, paddingLeft: 8 }}>
-                  <div style={{ fontWeight: 700, fontSize: 12, color: '#f1f5f9' }}>{alert.title}</div>
-                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{alert.detail}</div>
-                </div>
-              ))}
+              {aiAlerts.map((alert, i) => {
+                const linkedReport = i === 0 ? highR[0] : i === 1 ? openR[1] : currentReports[i];
+                return (
+                  <div key={i} style={{ borderLeft: `2px solid ${i === 0 ? '#ef4444' : '#334155'}`, paddingLeft: 8 }}>
+                    <div style={{ fontWeight: 700, fontSize: 12, color: '#f1f5f9' }}>{alert.title}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{alert.detail}</div>
+                    <button
+                      style={{ ...styles.referBtn, marginTop: 6, fontSize: 10, borderColor: i === 0 ? '#ef444444' : '#334155' }}
+                      onClick={() => {
+                        if (linkedReport) setSelectedReportId(linkedReport.id);
+                        openArea('reports');
+                        setInteractionMessage(`AI Alert: "${alert.title}" — Reports queue opened.`);
+                      }}
+                    >
+                      Investigate →
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -2016,9 +2029,28 @@ export default function EnhancedNexusPrototype() {
               <button style={styles.arrowBtn} onClick={() => selectEntityByIndexShift(1)} aria-label="Next entity">→</button>
             </div>
             <div style={styles.chipWrap}>
-              {DASHBOARD_VIEWS.map((item) => (
-                <button key={item} onClick={() => { setView(item); logAction(`Dashboard view set to ${item}`); }} style={{ ...styles.chip, ...(view === item ? styles.chipActive : {}) }}>{item}</button>
-              ))}
+              {DASHBOARD_VIEWS.map((item) => {
+                const viewAreaMap: Record<DashboardView, ActionArea> = {
+                  'Executive': 'analytics',
+                  'Operations': 'dispatch',
+                  'Risk & Liability': 'audit',
+                  'Public Portal': 'reports',
+                };
+                return (
+                  <button
+                    key={item}
+                    onClick={() => {
+                      setView(item);
+                      openArea(viewAreaMap[item]);
+                      if (item === 'Executive') void generateExecutiveBrief();
+                      logAction(`Dashboard view set to ${item}`);
+                    }}
+                    style={{ ...styles.chip, ...(view === item ? styles.chipActive : {}) }}
+                  >
+                    {item}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -2092,6 +2124,29 @@ export default function EnhancedNexusPrototype() {
         {activePortalTab === 'Dashboard' && renderDashboard()}
 
         {activePortalTab !== 'Dashboard' && (<>
+
+        <section style={{ border: '1px solid #334155', borderRadius: 12, padding: '12px 16px', background: 'rgba(11,18,32,0.92)', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+            <span style={{ fontSize: 22 }} aria-hidden>{portalTabIcon(activePortalTab, true)}</span>
+            <div>
+              <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: 15 }}>{activePortalTab}</div>
+              <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 1 }}>
+                {selectedEntity.name} · {selectedEntity.type} · {selectedEntity.region}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {ACTION_AREAS.map((a) => (
+              <button
+                key={a.key}
+                style={{ ...styles.smallBtn, ...(activeArea === a.key ? styles.sectionBtnActive : {}), fontSize: 11 }}
+                onClick={() => openArea(a.key)}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </section>
 
         <section style={styles.heroImageCard}>
           <img
@@ -2187,9 +2242,32 @@ export default function EnhancedNexusPrototype() {
           <div style={{ ...styles.recommendCard, marginTop: 10 }}>
             <div style={{ fontWeight: 700, marginBottom: 6 }}>Category Toolset ({activeCategoryType})</div>
             <div style={styles.referRow}>
-              {categoryTools(activeCategoryType).map((toolName) => (
-                <span key={`${activeCategoryType}-tool-${toolName}`} style={styles.channelChip}>{toolName}</span>
-              ))}
+              {categoryTools(activeCategoryType).map((toolName) => {
+                const toolAreaMap: Record<string, ActionArea> = {
+                  'Reports Queue': 'reports',
+                  'Action Center': 'dispatch',
+                  'Analytics': 'analytics',
+                  'Audit Trail': 'audit',
+                  'AI Copilot': 'analytics',
+                  'Voice Controls': 'reports',
+                };
+                const area = toolAreaMap[toolName];
+                return (
+                  <button
+                    key={`${activeCategoryType}-tool-${toolName}`}
+                    style={styles.referBtn}
+                    onClick={() => {
+                      if (area) {
+                        openArea(area);
+                      } else {
+                        openMockCategoryLink(toolName, `${toolName} module activated for ${activeCategoryType} operations. Review the action panel below.`);
+                      }
+                    }}
+                  >
+                    {toolName}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -2368,11 +2446,45 @@ export default function EnhancedNexusPrototype() {
                     style={styles.input}
                   />
                 </div>
+                {!selectedReport && (
+                  <div style={{ color: '#f97316', fontSize: 12, marginBottom: 8, padding: '6px 10px', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8 }}>
+                    ⚠ No report selected — go to Reports Queue and select one first.
+                  </div>
+                )}
+                {selectedReport && (
+                  <div style={{ color: '#93c5fd', fontSize: 12, marginBottom: 8, padding: '6px 10px', background: 'rgba(37,99,235,0.1)', border: '1px solid rgba(37,99,235,0.3)', borderRadius: 8 }}>
+                    Acting on: <strong>{selectedReport.id}</strong> — {selectedReport.title.slice(0, 50)}{selectedReport.title.length > 50 ? '…' : ''}
+                  </div>
+                )}
                 <div style={styles.actionButtons}>
-                  <button style={styles.smallBtn} onClick={() => openArea('reports')}>Back to Queue</button>
-                  <button style={styles.smallBtn} onClick={() => selectedReport && updateReportStatus(selectedReport.id, 'Investigating')}>Assign Team</button>
-                  <button style={styles.smallBtn} onClick={() => selectedReport && updateReportStatus(selectedReport.id, 'Action Taken')}>Log Action Taken</button>
-                  <button style={styles.smallBtnPrimary} onClick={() => selectedReport && updateReportStatus(selectedReport.id, 'Resolved')}>Mark Resolved</button>
+                  <button style={styles.smallBtn} onClick={() => openArea('reports')}>← Back to Queue</button>
+                  <button
+                    style={{ ...styles.smallBtn, ...(selectedReport ? {} : { opacity: 0.4 }) }}
+                    onClick={() => {
+                      if (!selectedReport) { setInteractionMessage('Select a report from the queue first.'); return; }
+                      void updateReportStatus(selectedReport.id, 'Investigating', { assignedTo: assignedTo || 'Field Team' });
+                    }}
+                  >
+                    Assign Team
+                  </button>
+                  <button
+                    style={{ ...styles.smallBtn, ...(selectedReport ? {} : { opacity: 0.4 }) }}
+                    onClick={() => {
+                      if (!selectedReport) { setInteractionMessage('Select a report from the queue first.'); return; }
+                      void updateReportStatus(selectedReport.id, 'Action Taken', { note: actionNote || 'Action logged from Action Center.' });
+                    }}
+                  >
+                    Log Action Taken
+                  </button>
+                  <button
+                    style={{ ...styles.smallBtnPrimary, ...(selectedReport ? {} : { opacity: 0.4 }) }}
+                    onClick={() => {
+                      if (!selectedReport) { setInteractionMessage('Select a report from the queue first.'); return; }
+                      void updateReportStatus(selectedReport.id, 'Resolved', { note: actionNote || 'Resolved from Action Center.' });
+                    }}
+                  >
+                    Mark Resolved
+                  </button>
                 </div>
               </>
             )}
@@ -2554,7 +2666,12 @@ export default function EnhancedNexusPrototype() {
                 </div>
 
                 <div style={{ ...styles.recommendCard, marginTop: 10 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Category Links ({activeCategoryType})</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <div style={{ fontWeight: 700 }}>Playbooks &amp; Resources ({activeCategoryType})</div>
+                    {mockLinkResponse && (
+                      <button style={{ ...styles.smallBtn, fontSize: 10, padding: '3px 8px' }} onClick={() => setMockLinkResponse('')}>Clear</button>
+                    )}
+                  </div>
                   <div style={styles.referRow}>
                     {categoryLinks(activeCategoryType).map((link) => (
                       <button
@@ -2562,20 +2679,64 @@ export default function EnhancedNexusPrototype() {
                         style={styles.referBtn}
                         onClick={() => openMockCategoryLink(link.label, link.action)}
                       >
-                        {link.label}
+                        📋 {link.label}
                       </button>
                     ))}
                   </div>
-                  <pre style={styles.briefText}>{mockLinkResponse || 'Select a category link to view mock response and intended behavior.'}</pre>
+                  {mockLinkResponse && (
+                    <div style={{ marginTop: 10, border: '1px solid #22c55e44', borderRadius: 8, padding: '10px 12px', background: 'rgba(34,197,94,0.04)' }}>
+                      <div style={{ fontSize: 10, color: '#22c55e', fontWeight: 700, marginBottom: 6 }}>✓ LOADED</div>
+                      <pre style={{ ...styles.briefText, border: 'none', background: 'transparent', padding: 0, margin: 0 }}>{mockLinkResponse}</pre>
+                    </div>
+                  )}
+                  {!mockLinkResponse && (
+                    <p style={{ ...styles.subtitle, fontSize: 11, marginTop: 8 }}>Click a resource above to preview its content and intended integration behavior.</p>
+                  )}
                 </div>
 
                 <div style={styles.responseCard}>
                   <div style={{ fontWeight: 800, marginBottom: 6 }}>Response Composer</div>
-                  <p style={styles.subtitle}>Use quick response templates and voice controls to accelerate action quality.</p>
+                  <p style={styles.subtitle}>Select a template, edit if needed, then submit directly to the active report.</p>
                   <div style={styles.referRow}>
                     <button style={styles.referBtn} onClick={() => setActionNote('Initial response sent. Team assigned and ETA communicated.')}>Template: Initial Response</button>
                     <button style={styles.referBtn} onClick={() => setActionNote('Evidence request sent. Awaiting documents and photos.')}>Template: Evidence Request</button>
                     <button style={styles.referBtn} onClick={() => setActionNote('Escalation notice sent to legal/compliance due to risk profile.')}>Template: Escalation Notice</button>
+                  </div>
+                  <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <input
+                      value={actionNote}
+                      onChange={(e) => setActionNote(e.target.value)}
+                      placeholder="Edit or type your action note here…"
+                      style={{ ...styles.input, width: '100%' }}
+                    />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        style={{ ...styles.smallBtnPrimary, flex: 1 }}
+                        onClick={() => {
+                          if (!selectedReport || !actionNote.trim()) {
+                            setInteractionMessage('Add a note above and select a report first.');
+                            return;
+                          }
+                          void updateReportStatus(selectedReport.id, 'Action Taken', { note: actionNote });
+                          setInteractionMessage(`Response logged for ${selectedReport.id}: "${actionNote.slice(0, 60)}${actionNote.length > 60 ? '…' : ''}"`);
+                        }}
+                      >
+                        Submit Response to Report
+                      </button>
+                      <button
+                        style={styles.smallBtn}
+                        onClick={() => {
+                          if (!selectedReport || !actionNote.trim()) return;
+                          void updateReportStatus(selectedReport.id, 'Investigating', { assignedTo: assignedTo || 'Response Team', note: actionNote });
+                          setInteractionMessage(`Note saved for ${selectedReport.id} — status set to Investigating.`);
+                        }}
+                      >
+                        Save as Note
+                      </button>
+                      {actionNote && (
+                        <button style={styles.smallBtn} onClick={() => setActionNote('')}>Clear</button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -2592,7 +2753,30 @@ export default function EnhancedNexusPrototype() {
             )}
 
             <h4 style={{ marginTop: 16, marginBottom: 8 }}>Connected Modules</h4>
-            <div style={styles.channelWrap}>{selectedEntity.modules.map((m) => <span key={m} style={styles.channelChip}>{m}</span>)}</div>
+            <div style={styles.channelWrap}>
+              {selectedEntity.modules.map((m) => {
+                const lower = m.toLowerCase();
+                const area: ActionArea = lower.includes('audit') || lower.includes('legal') || lower.includes('export')
+                  ? 'audit'
+                  : lower.includes('compliance') || lower.includes('risk') || lower.includes('board') || lower.includes('quality') || lower.includes('analytics') || lower.includes('advisor')
+                  ? 'analytics'
+                  : lower.includes('dispatch') || lower.includes('routing') || lower.includes('action') || lower.includes('command')
+                  ? 'dispatch'
+                  : 'reports';
+                return (
+                  <button
+                    key={m}
+                    style={{ ...styles.channelChip, cursor: 'pointer', background: 'rgba(15,23,42,0.85)' }}
+                    onClick={() => {
+                      openArea(area);
+                      setInteractionMessage(`Module: ${m} → ${ACTION_AREAS.find(a => a.key === area)?.label || area} opened.`);
+                    }}
+                  >
+                    {m}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </section>
 
