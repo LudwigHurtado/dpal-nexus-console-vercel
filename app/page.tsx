@@ -1,6 +1,16 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
+
+const ReportHeatMap = dynamic(() => import('./components/ReportHeatMap'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ height: 320, background: '#0d1117', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 13 }}>
+      Loading map…
+    </div>
+  ),
+});
 
 type EntityType =
   | 'City'
@@ -1733,12 +1743,22 @@ export default function EnhancedNexusPrototype() {
           </div>
 
           <div style={styles.dashCard}>
-            <div style={styles.cardTitle}>{activeCategoryType} Complaint Map</div>
-            <img
-              src={activeCategoryImage}
-              alt="Heat Map"
-              style={{ width: '100%', height: 170, objectFit: 'cover', borderRadius: 8, marginTop: 8, border: '1px solid #334155' }}
-              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = categoryFallbackImage(activeCategoryType); }}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={styles.cardTitle}>{activeCategoryType} Complaint Map</div>
+              <span style={{ fontSize: 10, color: '#64748b' }}>{currentReports.length} reports</span>
+            </div>
+            <ReportHeatMap
+              reports={currentReports}
+              entityRegion={selectedEntity.region}
+              entityName={selectedEntity.name}
+              height={210}
+              compact
+              selectedReportId={selectedReportId}
+              onSelectReport={(id) => {
+                setSelectedReportId(id);
+                openArea('reports');
+                setInteractionMessage(`Report ${id} selected from map — Reports Queue opened.`);
+              }}
             />
           </div>
         </div>
@@ -1767,28 +1787,30 @@ export default function EnhancedNexusPrototype() {
           </div>
 
           <div style={{ ...styles.dashCard, flex: 1 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <div style={styles.cardTitle}>{activeCategoryType} Complaint Heat Map</div>
-              <span style={{ fontSize: 11, color: '#94a3b8' }}>≡ {selectedEntity.region}</span>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: '#94a3b8' }}>≡ {selectedEntity.region}</span>
+                <button
+                  style={{ ...styles.smallBtn, fontSize: 10, padding: '2px 8px' }}
+                  onClick={() => { openArea('reports'); setInteractionMessage('Reports Queue opened.'); }}
+                >
+                  All Reports →
+                </button>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 10, marginBottom: 8, fontSize: 11, color: '#94a3b8', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span>● Complaints by District</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: '#eab308', borderRadius: 2, display: 'inline-block' }} /> Low</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: '#f97316', borderRadius: 2, display: 'inline-block' }} /> Medium</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: '#ef4444', borderRadius: 2, display: 'inline-block' }} /> High</span>
-            </div>
-            <img
-              src={activeCategoryImage}
-              alt="Complaint Map"
-              style={{ width: '100%', height: 210, objectFit: 'cover', borderRadius: 10, border: '1px solid #334155' }}
-              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = categoryFallbackImage(activeCategoryType); }}
+            <ReportHeatMap
+              reports={currentReports}
+              entityRegion={selectedEntity.region}
+              entityName={selectedEntity.name}
+              height={280}
+              selectedReportId={selectedReportId}
+              onSelectReport={(id) => {
+                setSelectedReportId(id);
+                openArea('reports');
+                setInteractionMessage(`Report ${id} selected from heat map — Reports Queue opened.`);
+              }}
             />
-            <button
-              style={{ ...styles.smallBtn, marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}
-              onClick={() => { openArea('analytics'); setInteractionMessage('Map details view opened — Analytics loaded.'); }}
-            >
-              View Details →
-            </button>
           </div>
         </div>
 
@@ -1960,14 +1982,21 @@ export default function EnhancedNexusPrototype() {
 
         <div style={styles.bankGridBottom}>
           <div style={styles.bankCardLarge}>
-            <h3 style={styles.cardTitle}>{activeCategoryType} Heat Map</h3>
-            <img
-              src={activeCategoryImage}
-              alt={`${activeCategoryType} Heatmap`}
-              style={styles.bankMapImage}
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = categoryFallbackImage(activeCategoryType);
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <h3 style={{ ...styles.cardTitle, margin: 0 }}>{activeCategoryType} Heat Map</h3>
+              <button style={{ ...styles.smallBtn, fontSize: 10, padding: '2px 8px' }} onClick={() => openArea('reports')}>Reports Queue →</button>
+            </div>
+            <ReportHeatMap
+              reports={topCases}
+              entityRegion={selectedEntity.region}
+              entityName={selectedEntity.name}
+              height={240}
+              compact
+              selectedReportId={selectedReportId}
+              onSelectReport={(id) => {
+                setSelectedReportId(id);
+                openArea('reports');
+                setInteractionMessage(`Report ${id} selected from map — Reports Queue opened.`);
               }}
             />
           </div>
