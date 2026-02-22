@@ -514,6 +514,13 @@ const CATEGORY_ICONS: Record<EntityType, string> = {
   'Airport Authority': '✈️',
 };
 
+const SETUP_CARDS = [
+  { id: 'budget', label: 'Budget Oversight', icon: '🔍' },
+  { id: 'safety', label: 'Public Safety Review', icon: '🛡️' },
+  { id: 'infra', label: 'Infrastructure Projects', icon: '🏗️' },
+  { id: 'policy', label: 'City Policy Explorer', icon: '📋' },
+] as const;
+
 // Using curated CATEGORY_SHOWCASE images first; fallback generator below keeps UI stable.
 
 function categoryFallbackImage(type: EntityType): string {
@@ -621,6 +628,16 @@ const CATEGORY_INTAKE_FIELDS: Record<EntityType, IntakeField[]> = {
     { key: 'aviationImpact', label: 'Aviation Impact', placeholder: 'e.g., delay, compliance, safety' },
   ],
 };
+
+function portalTabIcon(tab: string): string {
+  if (tab === 'Dashboard') return '📊';
+  if (/Reports?$/i.test(tab) || tab.includes('Case Reports') || tab.includes('Incident')) return '📄';
+  if (tab.includes('Complaints') || tab.includes('Violations') || tab.includes('Conduct') || tab.includes('Integrity')) return '⚠️';
+  if (tab.includes('ESG') || tab.includes('Policy') || tab.includes('Compliance')) return '🌿';
+  if (tab.includes('Feedback') || tab.includes('Community') || tab.includes('Rider') || tab.includes('Customer') || tab.includes('Parent') || tab.includes('Student') || tab.includes('Resident') || tab.includes('Partner') || tab.includes('Client') || tab.includes('Passenger')) return '💬';
+  if (tab.includes('Admin') || tab.includes('Operations') || tab.includes('Field') || tab.includes('Station') || tab.includes('Route') || tab.includes('Hub') || tab.includes('Store') || tab.includes('Terminal') || tab.includes('Network') || tab.includes('Grid') || tab.includes('Outage') || tab.includes('Inspections') || tab.includes('Inter-Agency') || tab.includes('Service Reports') || tab.includes('Clinical') || tab.includes('Campus') || tab.includes('Academic')) return '⚙️';
+  return '📋';
+}
 
 const PORTAL_TABS_BY_TYPE: Record<EntityType, string[]> = {
   City: ['Dashboard', 'Reports', 'Complaints & Violations', 'ESG & Policy Compliance', 'Community Feedback', 'City Admin'],
@@ -1643,12 +1660,16 @@ export default function EnhancedNexusPrototype() {
             {portalTabs.map((tab) => (
               <button
                 key={`portal-tab-${tab}`}
-                style={{ ...styles.portalTab, ...(activePortalTab === tab ? styles.portalTabActive : {}), ...(activePortalTab === tab ? { borderColor: profile.color } : {}) }}
+                style={{
+                  ...styles.portalTab,
+                  ...(activePortalTab === tab ? { ...styles.portalTabActive, borderBottomColor: profile.color } : {}),
+                }}
                 onClick={() => {
                   setActivePortalTab(tab);
                   setInteractionMessage(`Opened ${tab} tab for ${selectedEntity.type}.`);
                 }}
               >
+                <span style={{ fontSize: 16 }} aria-hidden>{portalTabIcon(tab)}</span>
                 {tab}
               </button>
             ))}
@@ -2273,6 +2294,29 @@ export default function EnhancedNexusPrototype() {
             <div style={styles.channelWrap}>{selectedEntity.modules.map((m) => <span key={m} style={styles.channelChip}>{m}</span>)}</div>
           </div>
         </section>
+
+        <section style={styles.setupsPanel}>
+          <div style={styles.setupsGrid}>
+            {SETUP_CARDS.map((setup) => (
+              <button
+                key={setup.id}
+                className="showcase-card"
+                style={styles.setupCard}
+                onClick={() => {
+                  setActivePortalTab('Dashboard');
+                  setInteractionMessage(`Opened ${setup.label}.`);
+                }}
+              >
+                <div style={styles.showcaseIconWrap}>
+                  <span style={styles.showcaseIcon} aria-hidden>{setup.icon}</span>
+                </div>
+                <div style={styles.showcaseBody}>
+                  <div style={styles.showcaseTag}>{setup.label}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
       </div>
     </main>
   );
@@ -2300,9 +2344,9 @@ const styles: Record<string, React.CSSProperties> = {
   portalTopBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   portalBrand: { color: '#dbeafe', fontWeight: 800, fontSize: 16 },
   portalRisk: { color: '#94a3b8', fontSize: 13 },
-  portalTabs: { display: 'flex', gap: 8, flexWrap: 'wrap' },
-  portalTab: { border: '1px solid #334155', background: '#0f172a', color: '#cbd5e1', borderRadius: 10, padding: '8px 10px', fontWeight: 700, cursor: 'pointer' },
-  portalTabActive: { background: '#111827', color: '#fff', boxShadow: '0 0 0 1px rgba(148,163,184,0.2) inset' },
+  portalTabs: { display: 'flex', gap: 0, flexWrap: 'wrap', borderBottom: '1px solid #334155', marginTop: 4 },
+  portalTab: { border: 'none', borderBottom: '3px solid transparent', background: 'transparent', color: '#94a3b8', borderRadius: 0, padding: '12px 16px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 },
+  portalTabActive: { background: 'rgba(148, 163, 184, 0.12)', color: '#f1f5f9', borderBottomColor: '#3b82f6' },
   selectorPanel: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)', display: 'grid', gap: 10 },
   panelLabel: { fontSize: 12, color: '#93c5fd', textTransform: 'uppercase', fontWeight: 800 },
   chipWrap: { display: 'flex', flexWrap: 'wrap', gap: 8 },
@@ -2336,6 +2380,23 @@ const styles: Record<string, React.CSSProperties> = {
   showcaseBody: { padding: '8px 16px 20px', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center' },
   showcaseTag: { color: '#f1f5f9', fontSize: 14, fontWeight: 700, lineHeight: 1.3 },
   showcaseCaption: { color: '#cbd5e1', fontSize: 13, lineHeight: 1.35 },
+  setupsPanel: { padding: '24px 0', borderTop: '1px solid #334155' },
+  setupsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, maxWidth: 1280, margin: '0 auto' },
+  setupCard: {
+    border: '1px solid rgba(148, 163, 184, 0.2)',
+    borderRadius: 16,
+    overflow: 'hidden',
+    background: 'rgba(15, 23, 42, 0.78)',
+    cursor: 'pointer',
+    padding: 0,
+    textAlign: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    boxShadow: '0 0 0 1px rgba(148, 163, 184, 0.1) inset, 0 1px 0 0 rgba(148, 163, 184, 0.06), 0 4px 24px rgba(0, 0, 0, 0.35)',
+    minHeight: 140,
+    transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
+  },
   heroImageCard: { position: 'relative', borderRadius: 16, overflow: 'hidden', border: '1px solid #334155', minHeight: 220 },
   heroImage: { width: '100%', height: 260, objectFit: 'cover', display: 'block' },
   heroOverlay: { position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(2,6,23,0.2), rgba(2,6,23,0.75))', padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 8 },
