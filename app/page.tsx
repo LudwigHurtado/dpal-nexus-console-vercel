@@ -1468,231 +1468,89 @@ export default function EnhancedNexusPrototype() {
   }, [activeArea, selectedEntity.id]);
 
   const renderEntityLayout = () => {
-    if (profile.layout === 'city') {
-      const trustScore = 82;
-      const openCount = counts.total - counts.byStatus.Resolved;
-      const cityTiles = [
-        { label: 'Budget Oversight', action: 'Budget variance view opened for district comparison.' },
-        { label: 'Public Safety Review', action: 'Public safety escalation board loaded.' },
-        { label: 'Infrastructure Projects', action: 'Infrastructure backlog and SLA panel opened.' },
-        { label: 'City Policy Explorer', action: 'Policy explorer opened with city compliance filters.' },
-      ];
+    const openCount = counts.total - counts.byStatus.Resolved;
+    const categoryScore = Math.max(68, Math.min(96, 70 + selectedEntity.confidence - Math.floor(openCount / 3)));
+    const palette = {
+      primary: profile.color,
+      warn: '#f59e0b',
+      danger: '#ef4444',
+      success: '#22c55e',
+    };
+    const topCases = currentReports.slice(0, 4);
 
-      return (
-        <div style={styles.bankShell}>
-          <div style={styles.bankGridTop}>
-            <div style={styles.bankCard}>
-              <h3 style={styles.cardTitle}>Trust & Transparency Score</h3>
-              <div style={styles.bankGaugeValue}>{trustScore}<span style={{ fontSize: 22, color: '#94a3b8' }}>/100</span></div>
-              <div style={{ color: '#86efac', fontWeight: 700, marginTop: 6 }}>+4 last 30 days</div>
-              <div style={styles.bankScaleRow}>
-                <span style={{ color: '#ef4444' }}>Negative</span>
-                <span style={{ color: '#fbbf24' }}>Neutral</span>
-                <span style={{ color: '#22c55e' }}>Positive</span>
-              </div>
-            </div>
+    const tileActions = categoryTools(activeCategoryType).slice(0, 4).map((label) => ({
+      label,
+      action: `${label} panel opened for ${activeCategoryType}.`,
+    }));
 
-            <div style={styles.bankCard}>
-              <h3 style={styles.cardTitle}>Overview of Key Reports</h3>
-              <div style={styles.bankListRow}><span>Code Violations</span><strong>{currentReports.filter((r) => /violation|illegal/i.test(r.title)).length}</strong></div>
-              <div style={styles.bankListRow}><span>Infrastructure Issues</span><strong>{currentReports.filter((r) => /road|drain|infrastructure|power/i.test(r.title)).length}</strong></div>
-              <div style={styles.bankListRow}><span>Service Complaints</span><strong>{currentReports.filter((r) => /complaint|issue/i.test(r.title)).length}</strong></div>
-              <div style={styles.bankListRow}><span>Total Open Cases</span><strong>{openCount}</strong></div>
-            </div>
-
-            <div style={styles.bankCard}>
-              <h3 style={styles.cardTitle}>Ongoing Issues</h3>
-              <div style={{ display: 'grid', gap: 8 }}>
-                {currentReports.slice(0, 4).map((r) => (
-                  <div key={`city-${r.id}`} style={styles.bankCaseRow}>
-                    <span style={{ fontWeight: 700 }}>{r.id}</span>
-                    <span style={{ color: '#cbd5e1' }}>{r.title}</span>
-                    <span style={styles.bankStatusBadge}>{r.status}</span>
-                  </div>
-                ))}
-              </div>
+    return (
+      <div style={styles.bankShell}>
+        <div style={styles.bankGridTop}>
+          <div style={styles.bankCard}>
+            <h3 style={styles.cardTitle}>{activeCategoryType} Score</h3>
+            <div style={styles.bankGaugeValue}>{categoryScore}<span style={{ fontSize: 22, color: '#94a3b8' }}>/100</span></div>
+            <div style={{ color: '#86efac', fontWeight: 700, marginTop: 6 }}>+{Math.max(1, Math.floor(selectedEntity.confidence / 25))} last 30 days</div>
+            <div style={styles.bankScaleRow}>
+              <span style={{ color: palette.danger }}>Low</span>
+              <span style={{ color: palette.warn }}>Medium</span>
+              <span style={{ color: palette.success }}>Strong</span>
             </div>
           </div>
 
-          <div style={styles.bankGridBottom}>
-            <div style={styles.bankCardLarge}>
-              <h3 style={styles.cardTitle}>City Complaint Heat Map</h3>
-              <img src={activeCategoryImage} alt="City Heatmap" style={styles.bankMapImage} onError={(e) => {
+          <div style={styles.bankCard}>
+            <h3 style={styles.cardTitle}>Overview of Key Reports</h3>
+            <div style={styles.bankListRow}><span>New Cases</span><strong>{counts.byStatus.New}</strong></div>
+            <div style={styles.bankListRow}><span>Investigating</span><strong>{counts.byStatus.Investigating}</strong></div>
+            <div style={styles.bankListRow}><span>Action Taken</span><strong>{counts.byStatus['Action Taken']}</strong></div>
+            <div style={styles.bankListRow}><span>Total Open Cases</span><strong>{openCount}</strong></div>
+          </div>
+
+          <div style={styles.bankCard}>
+            <h3 style={styles.cardTitle}>Ongoing Issues</h3>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {topCases.map((r) => (
+                <div key={`${activeCategoryType}-${r.id}`} style={styles.bankCaseRow}>
+                  <span style={{ fontWeight: 700 }}>{r.id}</span>
+                  <span style={{ color: '#cbd5e1' }}>{r.title}</span>
+                  <span style={{ ...styles.bankStatusBadge, borderColor: palette.primary, color: '#e2e8f0' }}>{r.status}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div style={styles.bankGridBottom}>
+          <div style={styles.bankCardLarge}>
+            <h3 style={styles.cardTitle}>{activeCategoryType} Heat Map</h3>
+            <img
+              src={activeCategoryImage}
+              alt={`${activeCategoryType} Heatmap`}
+              style={styles.bankMapImage}
+              onError={(e) => {
                 e.currentTarget.onerror = null;
                 e.currentTarget.src = categoryFallbackImage(activeCategoryType);
-              }} />
-            </div>
-            <div style={styles.bankCard}>
-              <h3 style={styles.cardTitle}>AI Advisor</h3>
-              <ul style={styles.bankInsightList}>
-                <li>Corruption/permit risk alerts prioritized by district and severity.</li>
-                <li>Infrastructure impact: escalate road hazards near schools first.</li>
-                <li>Suggested action: assign legal + public works on top unresolved items.</li>
-              </ul>
-            </div>
+              }}
+            />
           </div>
-
-          <div style={styles.cityTileGrid}>
-            {cityTiles.map((tile) => (
-              <button key={`tile-${tile.label}`} style={styles.cityTileButton} onClick={() => openMockCategoryLink(tile.label, tile.action)}>
-                {tile.label}
-              </button>
-            ))}
+          <div style={styles.bankCard}>
+            <h3 style={styles.cardTitle}>AI Advisor</h3>
+            <ul style={styles.bankInsightList}>
+              <li>Risk focus: prioritize high-severity items first for {activeCategoryType.toLowerCase()}.</li>
+              <li>SLA watch: unresolved queue currently at <strong>{openCount}</strong> open cases.</li>
+              <li>Suggested action: run {categoryTools(activeCategoryType)[0] || 'operations routing'} now.</li>
+            </ul>
           </div>
         </div>
-      );
-    }
 
-    if (profile.layout === 'hospital') {
-      return (
-        <div style={styles.uniqueLayoutCard}>
-          <h3 style={styles.cardTitle}>Hospital Layout: Clinical Safety Matrix</h3>
-          <div style={styles.uniqueGrid2}>
-            <MiniTile title="Critical Compliance Cases" value="9" subtitle="requires same-day closure" />
-            <MiniTile title="Patient Safety Escalations" value="14" subtitle="4 linked to same workflow" />
-          </div>
+        <div style={styles.cityTileGrid}>
+          {tileActions.map((tile) => (
+            <button key={`${activeCategoryType}-${tile.label}`} style={{ ...styles.cityTileButton, borderColor: palette.primary }} onClick={() => openMockCategoryLink(tile.label, tile.action)}>
+              {tile.label}
+            </button>
+          ))}
         </div>
-      );
-    }
-
-    if (profile.layout === 'school') {
-      return (
-        <div style={styles.uniqueLayoutCard}>
-          <h3 style={styles.cardTitle}>School Layout: Campus Welfare Board</h3>
-          <div style={styles.uniqueGrid3}>
-            <MiniTile title="Counselor Queue" value="23" subtitle="avg wait 5.4h" />
-            <MiniTile title="Parent Outreach" value="96%" subtitle="within SLA" />
-            <MiniTile title="High-Risk Campuses" value="3" subtitle="targeted intervention" />
-          </div>
-        </div>
-      );
-    }
-
-    if (profile.layout === 'utilities') {
-      const reliabilityScore = 89;
-      return (
-        <div style={styles.bankShell}>
-          <div style={styles.bankGridTop}>
-            <div style={styles.bankCard}>
-              <h3 style={styles.cardTitle}>Grid Reliability Score</h3>
-              <div style={styles.bankGaugeValue}>{reliabilityScore}<span style={{ fontSize: 22, color: '#94a3b8' }}>/100</span></div>
-              <div style={{ color: '#86efac', fontWeight: 700, marginTop: 6 }}>+2.1 this month</div>
-              <div style={styles.bankScaleRow}>
-                <span style={{ color: '#ef4444' }}>Critical</span>
-                <span style={{ color: '#fbbf24' }}>Warning</span>
-                <span style={{ color: '#22c55e' }}>Stable</span>
-              </div>
-            </div>
-
-            <div style={styles.bankCard}>
-              <h3 style={styles.cardTitle}>Outage & Service Summary</h3>
-              <div style={styles.bankListRow}><span>Active Outages</span><strong>{currentReports.filter((r) => r.status !== 'Resolved').length}</strong></div>
-              <div style={styles.bankListRow}><span>Customers Impacted</span><strong>14,102</strong></div>
-              <div style={styles.bankListRow}><span>Urgent Dispatches</span><strong>{currentReports.filter((r) => r.severity === 'High').length}</strong></div>
-              <div style={styles.bankListRow}><span>Regulatory Flags</span><strong>8</strong></div>
-            </div>
-
-            <div style={styles.bankCard}>
-              <h3 style={styles.cardTitle}>Field Crew Queue</h3>
-              <div style={{ display: 'grid', gap: 8 }}>
-                {currentReports.slice(0, 4).map((r) => (
-                  <div key={`util-${r.id}`} style={styles.bankCaseRow}>
-                    <span style={{ fontWeight: 700 }}>{r.id}</span>
-                    <span style={{ color: '#cbd5e1' }}>{r.title}</span>
-                    <span style={styles.bankStatusBadge}>{r.status}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div style={styles.bankGridBottom}>
-            <div style={styles.bankCardLarge}>
-              <h3 style={styles.cardTitle}>Infrastructure Outage Heat Map</h3>
-              <img src={activeCategoryImage} alt="Utilities Heatmap" style={styles.bankMapImage} onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = categoryFallbackImage(activeCategoryType);
-              }} />
-            </div>
-            <div style={styles.bankCard}>
-              <h3 style={styles.cardTitle}>Operations Advisor</h3>
-              <ul style={styles.bankInsightList}>
-                <li>Dispatch crews first to high-density outage zones.</li>
-                <li>Trigger regulator packet draft for unresolved high-severity incidents.</li>
-                <li>Proposed action: pre-position night crews for SLA recovery.</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (profile.layout === 'bank') {
-      const accountabilityScore = 87;
-      const topCases = currentReports.slice(0, 4);
-      return (
-        <div style={styles.bankShell}>
-          <div style={styles.bankGridTop}>
-            <div style={styles.bankCard}>
-              <h3 style={styles.cardTitle}>Public Accountability Score</h3>
-              <div style={styles.bankGaugeValue}>{accountabilityScore}<span style={{ fontSize: 22, color: '#94a3b8' }}>/100</span></div>
-              <div style={{ color: '#86efac', fontWeight: 700, marginTop: 6 }}>+3 last 30 days</div>
-              <div style={styles.bankScaleRow}>
-                <span style={{ color: '#ef4444' }}>Negative</span>
-                <span style={{ color: '#fbbf24' }}>Neutral</span>
-                <span style={{ color: '#22c55e' }}>Positive</span>
-              </div>
-            </div>
-
-            <div style={styles.bankCard}>
-              <h3 style={styles.cardTitle}>Active Reports</h3>
-              <div style={styles.bankListRow}><span>Fraud Allegations</span><strong>{currentReports.filter((r) => /fraud/i.test(r.title)).length}</strong></div>
-              <div style={styles.bankListRow}><span>Fee Disputes</span><strong>{currentReports.filter((r) => /fee|charge/i.test(r.title)).length}</strong></div>
-              <div style={styles.bankListRow}><span>Customer Complaints</span><strong>{counts.byStatus.New + counts.byStatus.Investigating}</strong></div>
-              <div style={styles.bankListRow}><span>Total Open Cases</span><strong>{counts.total - counts.byStatus.Resolved}</strong></div>
-            </div>
-
-            <div style={styles.bankCard}>
-              <h3 style={styles.cardTitle}>Case Feed</h3>
-              <div style={{ display: 'grid', gap: 8 }}>
-                {topCases.map((r) => (
-                  <div key={`bank-${r.id}`} style={styles.bankCaseRow}>
-                    <span style={{ fontWeight: 700 }}>{r.id}</span>
-                    <span style={{ color: '#cbd5e1' }}>{r.title}</span>
-                    <span style={styles.bankStatusBadge}>{r.status}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div style={styles.bankGridBottom}>
-            <div style={styles.bankCardLarge}>
-              <h3 style={styles.cardTitle}>Risk Heat Map</h3>
-              <img
-                src={activeCategoryImage}
-                alt="Risk Heatmap"
-                style={styles.bankMapImage}
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = categoryFallbackImage(activeCategoryType);
-                }}
-              />
-            </div>
-            <div style={styles.bankCard}>
-              <h3 style={styles.cardTitle}>AI Insights</h3>
-              <ul style={styles.bankInsightList}>
-                <li>Pattern detected: recurring {currentReports[0]?.title || 'high-risk complaints'}.</li>
-                <li>Regulatory risk probability: <strong>Moderate</strong>.</li>
-                <li>Suggested action: prioritize unresolved high-severity cases first.</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return null;
+      </div>
+    );
   };
 
   return (
