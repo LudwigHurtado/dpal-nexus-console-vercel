@@ -586,6 +586,25 @@ const CATEGORY_INTAKE_FIELDS: Record<EntityType, IntakeField[]> = {
   ],
 };
 
+const PORTAL_TABS_BY_TYPE: Record<EntityType, string[]> = {
+  City: ['Dashboard', 'Reports', 'Complaints & Violations', 'ESG & Policy Compliance', 'Community Feedback', 'City Admin'],
+  'County Government': ['Dashboard', 'Service Reports', 'Inter-Agency', 'Policy Compliance', 'Public Feedback', 'County Admin'],
+  'Hospital Network': ['Dashboard', 'Clinical Incidents', 'Patient Safety', 'Regulatory Compliance', 'Operations Feedback', 'Hospital Admin'],
+  'School District': ['Dashboard', 'Campus Reports', 'Safety & Conduct', 'Policy Compliance', 'Parent Feedback', 'District Admin'],
+  University: ['Dashboard', 'Academic Reports', 'Integrity Cases', 'Policy Compliance', 'Student Feedback', 'University Admin'],
+  'Transit Agency': ['Dashboard', 'Route Reports', 'Operations & Safety', 'Regulatory Compliance', 'Rider Feedback', 'Transit Admin'],
+  'Police Department': ['Dashboard', 'Case Reports', 'Field Operations', 'Policy Compliance', 'Community Feedback', 'Police Admin'],
+  'Fire Department': ['Dashboard', 'Incident Reports', 'Station Operations', 'Policy Compliance', 'Community Feedback', 'Fire Admin'],
+  'Housing Authority': ['Dashboard', 'Tenant Reports', 'Inspections & Safety', 'Policy Compliance', 'Resident Feedback', 'Housing Admin'],
+  'Utilities Provider': ['Dashboard', 'Outage Reports', 'Grid Operations', 'Regulatory Compliance', 'Customer Feedback', 'Utility Admin'],
+  'Retail Chain': ['Dashboard', 'Store Reports', 'Risk Operations', 'Policy Compliance', 'Customer Feedback', 'Retail Admin'],
+  'Logistics Company': ['Dashboard', 'Hub Reports', 'Route Operations', 'Policy Compliance', 'Partner Feedback', 'Logistics Admin'],
+  'Banking Group': ['Dashboard', 'Case Reports', 'Complaints & Violations', 'ESG & Policy Compliance', 'Community Feedback', 'Bank Admin'],
+  'Insurance Provider': ['Dashboard', 'Claim Reports', 'Fraud Operations', 'Policy Compliance', 'Client Feedback', 'Insurance Admin'],
+  'Telecom Provider': ['Dashboard', 'Network Reports', 'Service Operations', 'Regulatory Compliance', 'Customer Feedback', 'Telecom Admin'],
+  'Airport Authority': ['Dashboard', 'Terminal Reports', 'Ground Operations', 'Policy Compliance', 'Passenger Feedback', 'Airport Admin'],
+};
+
 const CATEGORY_PLAYBOOKS: Record<EntityType, CategoryPlaybook> = {  City: {
     operationalObjective: 'Reduce citizen risk quickly through cross-department dispatch and closure accountability.',
     workflowSteps: ['Intake validated', 'Department assigned', 'Field action logged', 'Citizen update sent', 'Case audited'],
@@ -702,6 +721,7 @@ export default function EnhancedNexusPrototype() {
   const [entityEditorName, setEntityEditorName] = useState('');
   const [entityEditorRegion, setEntityEditorRegion] = useState('');
   const [entityEditorStatus, setEntityEditorStatus] = useState<Status>('Active');
+  const [activePortalTab, setActivePortalTab] = useState<string>('Dashboard');
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(entities.map((e) => e.type)))] as const, [entities]);
   const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
@@ -717,6 +737,7 @@ export default function EnhancedNexusPrototype() {
   }, [showAllCategories, featuredCategoryTypes]);
   const filteredEntities = useMemo(() => (selectedType === 'All' ? entities : entities.filter((e) => e.type === selectedType)), [selectedType, entities]);
   const selectedEntity = filteredEntities.find((entity) => entity.id === selectedEntityId) || filteredEntities[0] || entities[0];
+  const portalTabs = PORTAL_TABS_BY_TYPE[selectedEntity.type] || PORTAL_TABS_BY_TYPE.City;
   const currentReports = reportsByEntity[selectedEntity.id] || [];
   const selectedReport = currentReports.find((r) => r.id === selectedReportId) || currentReports[0];
 
@@ -735,6 +756,10 @@ export default function EnhancedNexusPrototype() {
     const stamp = new Date().toLocaleTimeString();
     setAuditEntries((prev) => [`${stamp} - ${text}`, ...prev].slice(0, 20));
   };
+
+  useEffect(() => {
+    setActivePortalTab('Dashboard');
+  }, [selectedEntity.type]);
 
   const logAgent = (text: string) => {
     const stamp = new Date().toLocaleTimeString();
@@ -1573,6 +1598,27 @@ export default function EnhancedNexusPrototype() {
           </button>
         </header>
 
+        <section style={styles.portalShell}>
+          <div style={styles.portalTopBar}>
+            <div style={styles.portalBrand}>DPAL  |  {selectedEntity.type} Accountability Portal</div>
+            <div style={styles.portalRisk}>Risk Level <span style={{ color: profile.color, fontWeight: 800 }}>{selectedEntity.confidence >= 90 ? 'LOW' : selectedEntity.confidence >= 80 ? 'MODERATE' : 'ELEVATED'}</span></div>
+          </div>
+          <div style={styles.portalTabs}>
+            {portalTabs.map((tab) => (
+              <button
+                key={`portal-tab-${tab}`}
+                style={{ ...styles.portalTab, ...(activePortalTab === tab ? styles.portalTabActive : {}), ...(activePortalTab === tab ? { borderColor: profile.color } : {}) }}
+                onClick={() => {
+                  setActivePortalTab(tab);
+                  setInteractionMessage(`Opened ${tab} tab for ${selectedEntity.type}.`);
+                }}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </section>
+
         <section style={styles.selectorPanel}>
           <div style={styles.panelLabel}>Entity Type</div>
           <div style={styles.chipWrap}>
@@ -2218,6 +2264,13 @@ const styles: Record<string, React.CSSProperties> = {
   title: { margin: 0, fontSize: 30, fontWeight: 900 },
   subtitle: { margin: 0, color: '#94a3b8' },
   primaryBtn: { border: '1px solid #2563eb', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', color: '#fff', borderRadius: 10, padding: '10px 12px', fontWeight: 700, cursor: 'pointer' },
+  portalShell: { border: '1px solid #334155', borderRadius: 14, padding: 12, background: 'linear-gradient(145deg, rgba(9,17,32,0.95), rgba(8,12,20,0.9))', display: 'grid', gap: 10 },
+  portalTopBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  portalBrand: { color: '#dbeafe', fontWeight: 800, fontSize: 16 },
+  portalRisk: { color: '#94a3b8', fontSize: 13 },
+  portalTabs: { display: 'flex', gap: 8, flexWrap: 'wrap' },
+  portalTab: { border: '1px solid #334155', background: '#0f172a', color: '#cbd5e1', borderRadius: 10, padding: '8px 10px', fontWeight: 700, cursor: 'pointer' },
+  portalTabActive: { background: '#111827', color: '#fff', boxShadow: '0 0 0 1px rgba(148,163,184,0.2) inset' },
   selectorPanel: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)', display: 'grid', gap: 10 },
   panelLabel: { fontSize: 12, color: '#93c5fd', textTransform: 'uppercase', fontWeight: 800 },
   chipWrap: { display: 'flex', flexWrap: 'wrap', gap: 8 },
