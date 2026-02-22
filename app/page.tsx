@@ -322,7 +322,7 @@ const ENTITIES: Entity[] = [
   },
 ];
 
-const uniqueByType: Record<EntityType, { headline: string; color: string; channelFocus: string[]; layout: 'city' | 'hospital' | 'school' | 'default' }> = {
+const uniqueByType: Record<EntityType, { headline: string; color: string; channelFocus: string[]; layout: 'city' | 'hospital' | 'school' | 'bank' | 'default' }> = {
   City: { headline: 'Urban Command Channel', color: '#38bdf8', channelFocus: ['Citizen WhatsApp Intake', 'Field Inspector App', 'Public Portal Reports'], layout: 'city' },
   'County Government': { headline: 'County Operations Channel', color: '#60a5fa', channelFocus: ['Constituent Portal', 'Cross-Agency Workflow', 'Emergency Readiness'], layout: 'default' },
   'Hospital Network': { headline: 'Clinical Safety Channel', color: '#22c55e', channelFocus: ['Ward Supervisor Hotline', 'Compliance Web Form', 'Clinical Team Mobile'], layout: 'hospital' },
@@ -335,7 +335,7 @@ const uniqueByType: Record<EntityType, { headline: string; color: string; channe
   'Utilities Provider': { headline: 'Service Continuity Channel', color: '#84cc16', channelFocus: ['Outage Mobile Alerts', 'Regulator Portal', 'Crew Dispatch Terminal'], layout: 'default' },
   'Retail Chain': { headline: 'Retail Risk Control Channel', color: '#f43f5e', channelFocus: ['Store Incident Intake', 'Loss Prevention Queue', 'Regional Ops Console'], layout: 'default' },
   'Logistics Company': { headline: 'Logistics Resilience Channel', color: '#0ea5e9', channelFocus: ['Hub Incident Feed', 'Driver Safety Alerts', 'Route Disruption Queue'], layout: 'default' },
-  'Banking Group': { headline: 'Financial Operations Channel', color: '#22c55e', channelFocus: ['Branch Incident Intake', 'Fraud Risk Triage', 'Compliance Escalation'], layout: 'default' },
+  'Banking Group': { headline: 'Financial Operations Channel', color: '#22c55e', channelFocus: ['Branch Incident Intake', 'Fraud Risk Triage', 'Compliance Escalation'], layout: 'bank' },
   'Insurance Provider': { headline: 'Claims Integrity Channel', color: '#10b981', channelFocus: ['Claims Risk Queue', 'Field Assessment', 'Liability Tracker'], layout: 'default' },
   'Telecom Provider': { headline: 'Network Reliability Channel', color: '#8b5cf6', channelFocus: ['Outage Reports', 'Tower Dispatch', 'Customer Transparency'], layout: 'default' },
   'Airport Authority': { headline: 'Aviation Operations Channel', color: '#06b6d4', channelFocus: ['Terminal Incident Feed', 'Ground Ops Dispatch', 'Safety Audit Stream'], layout: 'default' },
@@ -1506,6 +1506,71 @@ export default function EnhancedNexusPrototype() {
       );
     }
 
+    if (profile.layout === 'bank') {
+      const accountabilityScore = 87;
+      const topCases = currentReports.slice(0, 4);
+      return (
+        <div style={styles.bankShell}>
+          <div style={styles.bankGridTop}>
+            <div style={styles.bankCard}>
+              <h3 style={styles.cardTitle}>Public Accountability Score</h3>
+              <div style={styles.bankGaugeValue}>{accountabilityScore}<span style={{ fontSize: 22, color: '#94a3b8' }}>/100</span></div>
+              <div style={{ color: '#86efac', fontWeight: 700, marginTop: 6 }}>+3 last 30 days</div>
+              <div style={styles.bankScaleRow}>
+                <span style={{ color: '#ef4444' }}>Negative</span>
+                <span style={{ color: '#fbbf24' }}>Neutral</span>
+                <span style={{ color: '#22c55e' }}>Positive</span>
+              </div>
+            </div>
+
+            <div style={styles.bankCard}>
+              <h3 style={styles.cardTitle}>Active Reports</h3>
+              <div style={styles.bankListRow}><span>Fraud Allegations</span><strong>{currentReports.filter((r) => /fraud/i.test(r.title)).length}</strong></div>
+              <div style={styles.bankListRow}><span>Fee Disputes</span><strong>{currentReports.filter((r) => /fee|charge/i.test(r.title)).length}</strong></div>
+              <div style={styles.bankListRow}><span>Customer Complaints</span><strong>{counts.byStatus.New + counts.byStatus.Investigating}</strong></div>
+              <div style={styles.bankListRow}><span>Total Open Cases</span><strong>{counts.total - counts.byStatus.Resolved}</strong></div>
+            </div>
+
+            <div style={styles.bankCard}>
+              <h3 style={styles.cardTitle}>Case Feed</h3>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {topCases.map((r) => (
+                  <div key={`bank-${r.id}`} style={styles.bankCaseRow}>
+                    <span style={{ fontWeight: 700 }}>{r.id}</span>
+                    <span style={{ color: '#cbd5e1' }}>{r.title}</span>
+                    <span style={styles.bankStatusBadge}>{r.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={styles.bankGridBottom}>
+            <div style={styles.bankCardLarge}>
+              <h3 style={styles.cardTitle}>Risk Heat Map</h3>
+              <img
+                src={activeCategoryImage}
+                alt="Risk Heatmap"
+                style={styles.bankMapImage}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = categoryFallbackImage(activeCategoryType);
+                }}
+              />
+            </div>
+            <div style={styles.bankCard}>
+              <h3 style={styles.cardTitle}>AI Insights</h3>
+              <ul style={styles.bankInsightList}>
+                <li>Pattern detected: recurring {currentReports[0]?.title || 'high-risk complaints'}.</li>
+                <li>Regulatory risk probability: <strong>Moderate</strong>.</li>
+                <li>Suggested action: prioritize unresolved high-severity cases first.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return null;
   };
 
@@ -2215,6 +2280,18 @@ const styles: Record<string, React.CSSProperties> = {
   uniqueLayoutCard: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)' },
   uniqueGrid3: { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))' },
   uniqueGrid2: { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' },
+  bankShell: { display: 'grid', gap: 12 },
+  bankGridTop: { display: 'grid', gap: 10, gridTemplateColumns: '1fr 1.2fr 1fr' },
+  bankGridBottom: { display: 'grid', gap: 10, gridTemplateColumns: '1.6fr 1fr' },
+  bankCard: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: '#0f172a' },
+  bankCardLarge: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: '#0f172a' },
+  bankGaugeValue: { fontSize: 56, fontWeight: 800, color: '#e2e8f0', lineHeight: 1.1 },
+  bankScaleRow: { display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: 12 },
+  bankListRow: { display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #1f2937', color: '#cbd5e1' },
+  bankCaseRow: { display: 'grid', gridTemplateColumns: '78px 1fr auto', gap: 8, alignItems: 'center', padding: '6px 8px', border: '1px solid #334155', borderRadius: 8, background: '#111827' },
+  bankStatusBadge: { background: '#1d4ed8', border: '1px solid #2563eb', color: '#dbeafe', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700 },
+  bankMapImage: { width: '100%', height: 240, objectFit: 'cover', borderRadius: 10, border: '1px solid #334155' },
+  bankInsightList: { margin: 0, paddingLeft: 18, color: '#cbd5e1', lineHeight: 1.8, fontSize: 13 },
   miniTile: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: '#0f172a' },
   navCard: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: 'rgba(11,18,32,0.86)', display: 'flex', gap: 8, flexWrap: 'wrap' },
   railwayCard: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: 'rgba(11,18,32,0.86)', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' },
