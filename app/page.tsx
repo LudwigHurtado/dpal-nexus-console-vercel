@@ -1742,34 +1742,25 @@ export default function EnhancedNexusPrototype() {
     const neutPct = Math.max(10, Math.round((100 - score) * 0.4));
     const posPct = 100 - negPct - neutPct;
     const scoreRad = (1 - score / 100) * Math.PI;
-    const gCx = 100, gCy = 90, gR = 70;
+    const gCx = 110, gCy = 100, gR = 82;
     const needleX = Math.round(gCx + gR * Math.cos(scoreRad));
     const needleY = Math.round(gCy - gR * Math.sin(scoreRad));
 
     const ongoingIssues = currentReports.slice(0, 4).map((r) => {
       const badge =
-        r.status === 'Investigating' ? { label: 'Under Investigation', color: '#f97316', bg: 'rgba(249,115,22,0.2)' }
-        : r.status === 'New' ? { label: 'Awaiting Review', color: '#60a5fa', bg: 'rgba(96,165,250,0.15)' }
-        : r.status === 'Action Taken' ? { label: 'Escalated', color: '#ef4444', bg: 'rgba(239,68,68,0.2)' }
-        : { label: 'Pending Response', color: '#14b8a6', bg: 'rgba(20,184,166,0.2)' };
+        r.status === 'Investigating' ? { label: 'Under Investigation', color: '#f97316', bg: 'rgba(249,115,22,0.18)', border: 'rgba(249,115,22,0.4)' }
+        : r.status === 'New' ? { label: 'Awaiting Review', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)', border: 'rgba(96,165,250,0.35)' }
+        : r.status === 'Action Taken' ? { label: 'Escalated', color: '#ef4444', bg: 'rgba(239,68,68,0.18)', border: 'rgba(239,68,68,0.4)' }
+        : { label: 'Pending Response', color: '#14b8a6', bg: 'rgba(20,184,166,0.15)', border: 'rgba(20,184,166,0.35)' };
       return { ...r, badge };
     });
 
     const highR = currentReports.filter((r) => r.severity === 'High');
     const openR = currentReports.filter((r) => r.status !== 'Resolved');
     const aiAlerts = [
-      {
-        title: highR[0] ? `Rise in: ${highR[0].title.split(' ').slice(0, 4).join(' ')}` : `${activeCategoryType} Risk Pattern Detected`,
-        detail: highR[0] ? `${highR[0].location} — Contact team for immediate review` : 'Review open high-severity cases.',
-      },
-      {
-        title: openR[1] ? `Operations Impact: "${openR[1].title.split(' ').slice(0, 3).join(' ')}"` : 'Infrastructure Structural Hazard',
-        detail: 'Assess and respond promptly. Prevent further escalation.',
-      },
-      {
-        title: `Service Issue Highlighted: "Slow Response Time"`,
-        detail: 'Improve emergency response SLA. Review gap options.',
-      },
+      { title: highR[0] ? `Rise in ${highR[0].title.split(' ').slice(0, 4).join(' ')}` : `${activeCategoryType} Risk Pattern Detected`, detail: highR[0] ? `${highR[0].location} — Contact internal audit` : 'Review open high-severity cases immediately.', color: '#ef4444', report: highR[0] },
+      { title: openR[1] ? `Infrastructure Impact: "${openR[1].title.split(' ').slice(0, 3).join(' ')}"` : 'Infrastructure Structural Hazards', detail: 'Assess and repair promptly. Prevent transparency gaps.', color: '#f97316', report: openR[1] },
+      { title: 'Service Issue Highlighted: "Slow Response Time"', detail: 'Improve emergency response SLA. Review gap options.', color: '#eab308', report: currentReports[2] },
     ];
 
     const kReports = infoNeeds.slice(0, 4).map((need, i) => ({
@@ -1777,229 +1768,243 @@ export default function EnhancedNexusPrototype() {
       value: need.value.split(' ')[0],
       status: i === 0 ? 'Open Reports' : i === 1 ? 'Under Investigation' : i === 2 ? 'In Progress' : 'Unresolved',
       color: i === 0 ? '#ef4444' : i === 1 ? '#f97316' : i === 2 ? '#3b82f6' : '#f97316',
+      icon: i === 0 ? '📋' : i === 1 ? '🔍' : i === 2 ? '🏗' : '⚠️',
     }));
 
     const sentKeys = [
-      { label: (infoNeeds[0]?.label || 'Housing Issues').split(' ').slice(0, 2).join(' '), pct: 28 },
-      { label: (infoNeeds[1]?.label || 'Public Safety').split(' ').slice(0, 2).join(' '), pct: 17 },
-      { label: (infoNeeds[2]?.label || 'Service Quality').split(' ').slice(0, 2).join(' ') + ' Complaints', pct: 14 },
+      { label: (infoNeeds[0]?.label || 'Housing Issues').split(' ').slice(0, 2).join(' '), pct: 28, color: '#3b82f6' },
+      { label: (infoNeeds[1]?.label || 'Public Safety').split(' ').slice(0, 2).join(' '), pct: 17, color: '#22c55e' },
+      { label: ((infoNeeds[2]?.label || 'Service Quality').split(' ').slice(0, 2).join(' ')) + ' Complaints', pct: 14, color: '#f97316' },
     ];
 
+    const bottomCards = [
+      { label: 'Budget Oversight', icon: '🔎', gradient: 'linear-gradient(135deg,#0f2952,#1a1a2e)', area: 'audit' as ActionArea },
+      { label: 'Public Safety Review', icon: '🛡', gradient: 'linear-gradient(135deg,#0a2e1a,#0f3d1e)', area: 'dispatch' as ActionArea },
+      { label: 'Infrastructure Projects', icon: '🏙', gradient: 'linear-gradient(135deg,#1a1205,#2d1f06)', area: 'dispatch' as ActionArea },
+      { label: 'Policy Explorer', icon: '📜', gradient: 'linear-gradient(135deg,#0a2e20,#0f3020)', area: 'analytics' as ActionArea },
+    ];
+
+    const DC = { background: 'rgba(8,14,28,0.97)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '16px 18px' };
+    const DT = { fontSize: 13, fontWeight: 800, color: '#e2e8f0', letterSpacing: 0.2, marginBottom: 12 };
+
     return (
-      <div style={styles.dashGrid}>
-        {/* LEFT COLUMN */}
-        <div style={styles.dashCol}>
-          <div style={styles.dashCard}>
-            <div style={styles.cardTitle}>Trust &amp; Transparency Score</div>
-            <div style={styles.gaugeWrap}>
-              <svg viewBox="0 0 200 110" style={{ width: '100%', maxWidth: 220 }}>
-                <path d="M 30 90 A 70 70 0 0 0 170 90" stroke="#1e293b" strokeWidth="16" fill="none" strokeLinecap="round" />
-                <path d="M 30 90 A 70 70 0 0 0 43 49" stroke="#ef4444" strokeWidth="16" fill="none" strokeLinecap="round" />
-                <path d="M 43 49 A 70 70 0 0 0 141 33" stroke="#eab308" strokeWidth="16" fill="none" strokeLinecap="round" />
-                <path d="M 141 33 A 70 70 0 0 0 170 90" stroke="#22c55e" strokeWidth="16" fill="none" strokeLinecap="round" />
-                <line x1="100" y1="90" x2={needleX} y2={needleY} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-                <circle cx="100" cy="90" r="5" fill="#fff" />
-                <text x="96" y="82" textAnchor="middle" fontSize="26" fontWeight="800" fill="#fff">{score}</text>
-                <text x="126" y="82" fontSize="12" fill="#94a3b8">/100</text>
-              </svg>
-            </div>
-            <div style={{ color: '#22c55e', fontWeight: 700, textAlign: 'center', fontSize: 13 }}>↑ +{delta} Last 30 Days</div>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 8, fontSize: 11 }}>
-              <span><span style={{ color: '#ef4444' }}>● </span><span style={{ color: '#94a3b8' }}>Negative</span></span>
-              <span><span style={{ color: '#eab308' }}>● </span><span style={{ color: '#94a3b8' }}>Neutral</span></span>
-              <span><span style={{ color: '#22c55e' }}>● </span><span style={{ color: '#94a3b8' }}>Positive</span></span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 10 }}>
-              {[{ val: negPct, label: 'Negative', color: '#ef4444' }, { val: neutPct, label: 'Neutral', color: '#eab308' }, { val: posPct, label: 'Positive', color: '#22c55e' }].map((s) => (
-                <div key={s.label} style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.val}%</div>
-                  <div style={{ fontSize: 10, color: '#94a3b8' }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* MAIN 3-COLUMN GRID */}
+        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr 280px', gap: 12, alignItems: 'start' }}>
 
-          <div style={styles.dashCard}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <div style={styles.cardTitle}>{activeCategoryType} Complaint Map</div>
-              <span style={{ fontSize: 10, color: '#64748b' }}>{currentReports.length} reports</span>
-            </div>
-            <ReportHeatMap
-              reports={currentReports}
-              entityRegion={selectedEntity.region}
-              entityName={selectedEntity.name}
-              height={210}
-              compact
-              selectedReportId={selectedReportId}
-              onSelectReport={(id) => {
-                setSelectedReportId(id);
-                openArea('reports');
-                setInteractionMessage(`Report ${id} selected from map — Reports Queue opened.`);
-              }}
-            />
-          </div>
-        </div>
-
-        {/* CENTER COLUMN */}
-        <div style={styles.dashColCenter}>
-          <div style={styles.dashCard}>
-            <div style={styles.cardTitle}>Overview of Key Reports</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
-              {kReports.map((kr) => (
-                <div key={kr.label} style={{ border: '1px solid #334155', borderRadius: 10, padding: '10px 12px', background: 'rgba(15,23,42,0.7)' }}>
-                  <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4, lineHeight: 1.3 }}>{kr.label}</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: kr.color }}>{kr.value}</div>
-                  <div style={{ marginTop: 4 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', background: kr.color + '22', color: kr.color, borderRadius: 4 }}>{kr.status}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button
-              style={{ ...styles.smallBtnPrimary, width: '100%', marginTop: 12, padding: '11px 0', borderRadius: 8, fontSize: 14 }}
-              onClick={() => { openArea('analytics'); void generateExecutiveBrief(); }}
-            >
-              {executiveBriefLoading ? 'Generating Summary…' : 'Generate Summary Report'}
-            </button>
-          </div>
-
-          <div style={{ ...styles.dashCard, flex: 1 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <div style={styles.cardTitle}>{activeCategoryType} Complaint Heat Map</div>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <span style={{ fontSize: 11, color: '#94a3b8' }}>≡ {selectedEntity.region}</span>
-                <button
-                  style={{ ...styles.smallBtn, fontSize: 10, padding: '2px 8px' }}
-                  onClick={() => { openArea('reports'); setInteractionMessage('Reports Queue opened.'); }}
-                >
-                  All Reports →
-                </button>
+          {/* ── LEFT COLUMN ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Trust & Transparency Score */}
+            <div style={DC}>
+              <div style={DT}>Trust &amp; Transparency Score</div>
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <svg viewBox="0 0 220 120" style={{ width: '100%', maxWidth: 240 }}>
+                  <defs>
+                    <linearGradient id="gaugeGreen" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#22c55e" /><stop offset="100%" stopColor="#16a34a" /></linearGradient>
+                  </defs>
+                  <path d="M 28 100 A 82 82 0 0 1 192 100" stroke="#1e293b" strokeWidth="18" fill="none" strokeLinecap="round" />
+                  <path d="M 28 100 A 82 82 0 0 1 45 52" stroke="#ef4444" strokeWidth="18" fill="none" strokeLinecap="round" />
+                  <path d="M 45 52 A 82 82 0 0 1 155 28" stroke="#eab308" strokeWidth="18" fill="none" strokeLinecap="round" />
+                  <path d="M 155 28 A 82 82 0 0 1 192 100" stroke="#22c55e" strokeWidth="18" fill="none" strokeLinecap="round" />
+                  <line x1={gCx} y1={gCy} x2={needleX} y2={needleY} stroke="#ffffff" strokeWidth="3" strokeLinecap="round" />
+                  <circle cx={gCx} cy={gCy} r="6" fill="#ffffff" />
+                  <circle cx={gCx} cy={gCy} r="3" fill="#0f172a" />
+                  <text x={gCx} y="88" textAnchor="middle" fontSize="32" fontWeight="900" fill="#ffffff">{score}</text>
+                  <text x={gCx + 28} y="88" fontSize="14" fill="#64748b">/100</text>
+                </svg>
               </div>
-            </div>
-            <ReportHeatMap
-              reports={currentReports}
-              entityRegion={selectedEntity.region}
-              entityName={selectedEntity.name}
-              height={280}
-              selectedReportId={selectedReportId}
-              onSelectReport={(id) => {
-                setSelectedReportId(id);
-                openArea('reports');
-                setInteractionMessage(`Report ${id} selected from heat map — Reports Queue opened.`);
-              }}
-            />
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN */}
-        <div style={styles.dashCol}>
-          <div style={styles.dashCard}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <div style={styles.cardTitle}>Ongoing Issues</div>
-              <button style={{ ...styles.smallBtn, fontSize: 11, padding: '4px 8px' }} onClick={() => openArea('reports')}>View All →</button>
-            </div>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {ongoingIssues.map((issue) => (
-                <div key={issue.id} style={{ borderBottom: '1px solid #1e293b', paddingBottom: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
-                    <div style={{ flex: 1 }}>
-                      <button
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}
-                        onClick={() => { setSelectedReportId(issue.id); openArea('reports'); }}
-                      >
-                        <span style={{ fontWeight: 700, fontSize: 12, color: '#f1f5f9' }}>{issue.id}</span>
-                        <span style={{ fontSize: 12, color: '#cbd5e1', marginLeft: 5 }}>{issue.title.slice(0, 22)}{issue.title.length > 22 ? '…' : ''}</span>
-                      </button>
-                      <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{issue.location}</div>
-                    </div>
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 5, background: issue.badge.bg, color: issue.badge.color, whiteSpace: 'nowrap' }}>
-                      {issue.badge.label}
-                    </span>
+              <div style={{ textAlign: 'center', color: '#22c55e', fontWeight: 700, fontSize: 13, marginTop: 4 }}>↑ +{delta} Last 30 Days</div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 14, marginTop: 10, fontSize: 11 }}>
+                <span style={{ color: '#ef4444' }}>● <span style={{ color: '#94a3b8' }}>Negative</span></span>
+                <span style={{ color: '#eab308' }}>● <span style={{ color: '#94a3b8' }}>Neutral</span></span>
+                <span style={{ color: '#22c55e' }}>● <span style={{ color: '#94a3b8' }}>Positive</span></span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                {[{ val: negPct, label: 'Negative', color: '#ef4444' }, { val: neutPct, label: 'Neutral', color: '#eab308' }, { val: posPct, label: 'Positive', color: '#22c55e' }].map((s) => (
+                  <div key={s.label} style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 900, color: s.color }}>{s.val}%</div>
+                    <div style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>{s.label}</div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div style={styles.dashCard}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <div style={styles.cardTitle}>AI Advisor</div>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {[profile.color, '#334155', '#334155'].map((c, i) => (
-                  <span key={i} style={{ width: 7, height: 7, borderRadius: 999, background: c, display: 'inline-block' }} />
                 ))}
               </div>
             </div>
-            <div style={{ fontSize: 11, color: '#93c5fd', fontWeight: 700, marginBottom: 8 }}>Risk Alerts</div>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {aiAlerts.map((alert, i) => {
-                const linkedReport = i === 0 ? highR[0] : i === 1 ? openR[1] : currentReports[i];
-                return (
-                  <div key={i} style={{ borderLeft: `2px solid ${i === 0 ? '#ef4444' : '#334155'}`, paddingLeft: 8 }}>
-                    <div style={{ fontWeight: 700, fontSize: 12, color: '#f1f5f9' }}>{alert.title}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{alert.detail}</div>
+
+            {/* Complaint Map */}
+            <div style={DC}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div style={DT}>{activeCategoryType} Complaint Map</div>
+                <span style={{ fontSize: 10, color: '#475569', background: 'rgba(255,255,255,0.05)', padding: '2px 7px', borderRadius: 4 }}>{currentReports.length} reports</span>
+              </div>
+              <ReportHeatMap
+                reports={currentReports}
+                entityRegion={selectedEntity.region}
+                entityName={selectedEntity.name}
+                height={200}
+                compact
+                selectedReportId={selectedReportId}
+                onSelectReport={(id) => { setSelectedReportId(id); openArea('reports'); setInteractionMessage(`Report ${id} selected from map.`); }}
+              />
+            </div>
+          </div>
+
+          {/* ── CENTER COLUMN ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Overview of Key Reports */}
+            <div style={DC}>
+              <div style={DT}>Overview of Key Reports</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {kReports.map((kr) => (
+                  <button
+                    key={kr.label}
+                    style={{ border: `1px solid ${kr.color}22`, borderRadius: 10, padding: '14px 14px', background: `rgba(8,14,28,0.9)`, textAlign: 'left' as const, cursor: 'pointer', transition: 'border-color 0.2s' }}
+                    onClick={() => { openArea('reports'); setInteractionMessage(`Viewing: ${kr.label}`); }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = kr.color + '66'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = kr.color + '22'; }}
+                  >
+                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6, lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span>{kr.icon}</span>{kr.label}
+                    </div>
+                    <div style={{ fontSize: 36, fontWeight: 900, color: kr.color, lineHeight: 1 }}>{kr.value}</div>
+                    <div style={{ marginTop: 8 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', background: kr.color + '18', color: kr.color, borderRadius: 5, border: `1px solid ${kr.color}33` }}>{kr.status}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <button
+                style={{ width: '100%', marginTop: 14, padding: '12px 0', borderRadius: 9, fontSize: 13, fontWeight: 700, background: 'linear-gradient(90deg,#1d4ed8,#2563eb)', color: '#fff', border: 'none', cursor: 'pointer', letterSpacing: 0.3 }}
+                onClick={() => { openArea('analytics'); void generateExecutiveBrief(); }}
+              >
+                {executiveBriefLoading ? '⏳ Generating Summary…' : '📊 Generate Summary Report'}
+              </button>
+            </div>
+
+            {/* Heat Map */}
+            <div style={{ ...DC, flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div style={DT}>{activeCategoryType} Complaint Heat Map</div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <span style={{ fontSize: 10, color: '#475569' }}>≡ {selectedEntity.region}</span>
+                  <button style={{ ...styles.smallBtn, fontSize: 10, padding: '3px 9px' }} onClick={() => { openArea('reports'); }}>View Details →</button>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 8, fontSize: 10, color: '#64748b', alignItems: 'center' }}>
+                <span>Complaints by District:</span>
+                {[{ label: 'Low', color: '#22c55e' }, { label: 'Medium', color: '#f97316' }, { label: 'High', color: '#ef4444' }].map(l => (
+                  <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: l.color, display: 'inline-block' }} />{l.label}
+                  </span>
+                ))}
+              </div>
+              <ReportHeatMap
+                reports={currentReports}
+                entityRegion={selectedEntity.region}
+                entityName={selectedEntity.name}
+                height={260}
+                selectedReportId={selectedReportId}
+                onSelectReport={(id) => { setSelectedReportId(id); openArea('reports'); setInteractionMessage(`Report ${id} selected from heat map.`); }}
+              />
+            </div>
+          </div>
+
+          {/* ── RIGHT COLUMN ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Ongoing Issues */}
+            <div style={DC}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={DT}>Ongoing Issues</div>
+                <button style={{ fontSize: 11, color: '#60a5fa', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }} onClick={() => openArea('reports')}>View All &rsaquo;</button>
+              </div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {ongoingIssues.map((issue) => (
+                  <button
+                    key={issue.id}
+                    style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '10px 12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 9, textAlign: 'left' as const, cursor: 'pointer', width: '100%' }}
+                    onClick={() => { setSelectedReportId(issue.id); openArea('reports'); }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(30,41,59,0.8)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(15,23,42,0.6)'; }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontWeight: 800, fontSize: 11, color: '#93c5fd', fontFamily: 'monospace' }}>{issue.id}</span>
+                        <span style={{ fontSize: 11, color: '#e2e8f0', marginLeft: 6, fontWeight: 600 }}>{issue.title.slice(0, 20)}{issue.title.length > 20 ? '…' : ''}</span>
+                      </div>
+                      <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 7px', borderRadius: 999, background: issue.badge.bg, color: issue.badge.color, border: `1px solid ${issue.badge.border}`, whiteSpace: 'nowrap' as const, flexShrink: 0 }}>
+                        {issue.badge.label}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 10, color: '#475569', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span>📍</span>{issue.location}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* AI Advisor */}
+            <div style={DC}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={DT}>AI Advisor</div>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {[profile.color, '#334155', '#334155'].map((c, i) => <span key={i} style={{ width: 7, height: 7, borderRadius: 999, background: c, display: 'inline-block' }} />)}
+                </div>
+              </div>
+              <div style={{ fontSize: 10, color: '#93c5fd', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase' as const, marginBottom: 10 }}>Risk Alerts</div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {aiAlerts.map((alert, i) => (
+                  <div key={i} style={{ borderLeft: `3px solid ${alert.color}`, paddingLeft: 10, paddingTop: 2, paddingBottom: 2 }}>
+                    <div style={{ fontWeight: 700, fontSize: 12, color: '#f1f5f9', lineHeight: 1.3 }}>{alert.title}</div>
+                    <div style={{ fontSize: 10, color: '#64748b', marginTop: 3, lineHeight: 1.4 }}>{alert.detail}</div>
                     <button
-                      style={{ ...styles.referBtn, marginTop: 6, fontSize: 10, borderColor: i === 0 ? '#ef444444' : '#334155' }}
-                      onClick={() => {
-                        if (linkedReport) setSelectedReportId(linkedReport.id);
-                        openArea('reports');
-                        setInteractionMessage(`AI Alert: "${alert.title}" — Reports queue opened.`);
-                      }}
+                      style={{ marginTop: 6, fontSize: 10, color: alert.color, background: alert.color + '12', border: `1px solid ${alert.color}33`, borderRadius: 5, padding: '3px 9px', cursor: 'pointer', fontWeight: 700 }}
+                      onClick={() => { if (alert.report) setSelectedReportId(alert.report.id); openArea('reports'); setInteractionMessage(`AI Alert: "${alert.title}" — investigating.`); }}
                     >
                       Investigate →
                     </button>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div style={styles.dashCard}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <div style={styles.cardTitle}>Public Sentiment Analysis</div>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {['#334155', '#334155'].map((c, i) => <span key={i} style={{ width: 7, height: 7, borderRadius: 999, background: c, display: 'inline-block' }} />)}
+                ))}
               </div>
             </div>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {sentKeys.map((kw) => (
-                <div key={kw.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ fontSize: 12, color: '#cbd5e1', minWidth: 100, lineHeight: 1.2 }}>● {kw.label}</div>
-                  <div style={{ flex: 1, height: 5, borderRadius: 999, background: '#1e293b', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${kw.pct * 2.5}%`, background: 'linear-gradient(90deg,#3b82f6,#22c55e)', borderRadius: 999 }} />
-                  </div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#f1f5f9', minWidth: 28 }}>{kw.pct}%</div>
-                </div>
-              ))}
-            </div>
-          </div>
 
-          <div style={styles.dashCard}>
-            <div style={styles.cardTitle}>🔌 Endpoint Readiness</div>
-            <div style={{ display: 'grid', gap: 5, marginTop: 8 }}>
-              {Object.entries(endpointStatus).map(([key, status]) => (
-                <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
-                  <span style={{ color: '#94a3b8' }}>{key}</span>
-                  <span style={{ color: status === 'ok' ? '#22c55e' : status === 'fail' ? '#ef4444' : '#475569', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: 999, background: status === 'ok' ? '#22c55e' : status === 'fail' ? '#ef4444' : '#334155', display: 'inline-block' }} />
-                    {status.toUpperCase()}
-                  </span>
+            {/* Public Sentiment */}
+            <div style={DC}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={DT}>Public Sentiment Analysis</div>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {['#334155', '#334155'].map((c, i) => <span key={i} style={{ width: 7, height: 7, borderRadius: 999, background: c, display: 'inline-block' }} />)}
                 </div>
-              ))}
+              </div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {sentKeys.map((kw) => (
+                  <div key={kw.label}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <span style={{ fontSize: 11, color: '#94a3b8' }}>● {kw.label}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#f1f5f9' }}>{kw.pct}%</span>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${kw.pct * 3.2}%`, background: kw.color, borderRadius: 999 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
-              <input
-                value={apiBaseInput}
-                onChange={(e) => setApiBaseInput(e.target.value)}
-                placeholder="https://api.railway.app"
-                style={{ ...styles.input, flex: 1, fontSize: 11, padding: '6px 8px' }}
-              />
-              <button style={{ ...styles.smallBtnPrimary, padding: '6px 12px', fontSize: 11 }} onClick={() => void testIntegration()}>
-                {isSyncing ? '…' : 'Test'}
-              </button>
-            </div>
-            {syncMessage && <div style={{ fontSize: 10, color: syncMessage.includes('ok') || syncMessage.includes('✓') ? '#22c55e' : '#f97316', marginTop: 4 }}>{syncMessage}</div>}
           </div>
+        </div>
+
+        {/* ── BOTTOM ACTION TILES ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
+          {bottomCards.map((bc) => (
+            <button
+              key={bc.label}
+              style={{ background: bc.gradient, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '22px 18px', cursor: 'pointer', textAlign: 'left' as const, minHeight: 100, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', position: 'relative', overflow: 'hidden' }}
+              onClick={() => { openArea(bc.area); setInteractionMessage(`${bc.label} — opened.`); }}
+              onMouseEnter={e => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.18)'; }}
+              onMouseLeave={e => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.08)'; }}
+            >
+              <span style={{ fontSize: 32, position: 'absolute', top: 16, left: 16, opacity: 0.7 }}>{bc.icon}</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#f1f5f9', letterSpacing: 0.2 }}>{bc.label}</span>
+            </button>
+          ))}
         </div>
       </div>
     );
@@ -2349,8 +2354,11 @@ export default function EnhancedNexusPrototype() {
                 backgroundColor: selectedEntity.confidence >= 90 ? 'rgba(34,197,94,0.2)' : selectedEntity.confidence >= 80 ? 'rgba(249,115,22,0.25)' : 'rgba(239,68,68,0.2)',
                 borderColor: selectedEntity.confidence >= 90 ? '#22c55e' : selectedEntity.confidence >= 80 ? '#f97316' : '#ef4444',
               }}>
-                <span style={{ fontSize: 14 }} aria-hidden>🛡️</span>
-                <span>Risk Level: <strong style={{ color: profile.color }}>{selectedEntity.confidence >= 90 ? 'LOW' : selectedEntity.confidence >= 80 ? 'MODERATE' : 'ELEVATED'}</strong></span>
+                <span style={{ fontSize: 13 }} aria-hidden>🛡</span>
+                <div>
+                  <div style={{ fontSize: 9, color: '#94a3b8', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' }}>Risk Level</div>
+                  <div style={{ fontWeight: 900, fontSize: 13, color: profile.color, letterSpacing: 0.5 }}>{selectedEntity.confidence >= 90 ? 'LOW' : selectedEntity.confidence >= 80 ? 'MODERATE' : 'ELEVATED'}</div>
+                </div>
               </div>
               <div style={styles.portalUserRow}>
                 <div style={styles.portalAvatar} aria-hidden>{(selectedEntity.name || 'A').charAt(0)}</div>
@@ -3531,21 +3539,21 @@ const styles: Record<string, React.CSSProperties> = {
   title: { margin: 0, fontSize: 30, fontWeight: 900 },
   subtitle: { margin: 0, color: '#94a3b8' },
   primaryBtn: { border: '1px solid #2563eb', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', color: '#fff', borderRadius: 10, padding: '10px 12px', fontWeight: 700, cursor: 'pointer' },
-  portalShell: { border: '1px solid #334155', borderRadius: 16, padding: 16, background: 'linear-gradient(145deg, rgba(9,17,32,0.98), rgba(8,12,20,0.95))', display: 'grid', gap: 14 },
-  portalTopBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
+  portalShell: { border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '14px 16px', background: 'linear-gradient(180deg, rgba(7,12,24,0.99) 0%, rgba(5,9,18,0.99) 100%)', display: 'grid', gap: 12, boxShadow: '0 0 0 1px rgba(255,255,255,0.03) inset' },
+  portalTopBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' as const, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.06)' },
   portalBrandRow: { display: 'flex', alignItems: 'center', gap: 12 },
-  portalLogo: { width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: '#fff', fontSize: 20, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(59,130,246,0.4)' },
-  portalBrand: { color: '#fff', fontWeight: 800, fontSize: 18, letterSpacing: 0.5 },
-  portalSubtitle: { color: '#94a3b8', fontSize: 13, marginTop: 2 },
-  portalEntityMeta: { color: '#64748b', fontSize: 11, marginTop: 2 },
+  portalLogo: { width: 38, height: 38, borderRadius: 9, background: 'linear-gradient(135deg, #1d6fe8, #1a56c4)', color: '#fff', fontSize: 18, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 14px rgba(29,111,232,0.5)' },
+  portalBrand: { color: '#ffffff', fontWeight: 900, fontSize: 19, letterSpacing: 0.8 },
+  portalSubtitle: { color: '#64748b', fontSize: 12, marginTop: 1 },
+  portalEntityMeta: { color: '#475569', fontSize: 10, marginTop: 2 },
   portalRightRow: { display: 'flex', alignItems: 'center', gap: 12 },
-  portalRiskPill: { display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, border: '1px solid', color: '#e2e8f0', fontSize: 12 },
-  portalUserRow: { display: 'flex', alignItems: 'center', gap: 8 },
-  portalAvatar: { width: 32, height: 32, borderRadius: 999, background: '#334155', color: '#94a3b8', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  portalRiskPill: { display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 999, border: '1px solid', color: '#e2e8f0', fontSize: 12, fontWeight: 700 },
+  portalUserRow: { display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999, background: 'rgba(255,255,255,0.04)', cursor: 'pointer' },
+  portalAvatar: { width: 30, height: 30, borderRadius: 999, background: 'linear-gradient(135deg,#334155,#1e293b)', color: '#94a3b8', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #334155' },
   portalUserLabel: { color: '#cbd5e1', fontSize: 13, fontWeight: 600 },
-  portalTabs: { display: 'flex', gap: 8, flexWrap: 'wrap' },
-  portalTab: { border: '1px solid #334155', background: 'rgba(15,23,42,0.6)', color: '#94a3b8', borderRadius: 999, padding: '10px 16px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 },
-  portalTabActive: { background: '#2563eb', borderColor: '#2563eb', color: '#fff' },
+  portalTabs: { display: 'flex', gap: 4, flexWrap: 'wrap' as const, padding: '0 2px' },
+  portalTab: { border: '1px solid rgba(255,255,255,0.08)', background: 'transparent', color: '#64748b', borderRadius: 8, padding: '9px 15px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, transition: 'all 0.15s' },
+  portalTabActive: { background: 'rgba(37,99,235,0.18)', borderColor: '#2563eb', color: '#93c5fd', fontWeight: 700 },
   selectorPanel: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)', display: 'grid', gap: 10 },
   panelLabel: { fontSize: 12, color: '#93c5fd', textTransform: 'uppercase', fontWeight: 800 },
   chipWrap: { display: 'flex', flexWrap: 'wrap', gap: 8 },
