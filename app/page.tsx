@@ -807,6 +807,8 @@ export default function EnhancedNexusPrototype() {
   const [entityEditorStatus, setEntityEditorStatus] = useState<Status>('Active');
   const [activePortalTab, setActivePortalTab] = useState<string>('Dashboard');
   const [activeTool, setActiveTool] = useState<string>('');
+  const [entitySearch, setEntitySearch] = useState('');
+  const [entitySearchOpen, setEntitySearchOpen] = useState(false);
   const [userEvidenceByReport, setUserEvidenceByReport] = useState<Record<string, Array<{id: string; type: string; label: string; url: string; addedAt: string}>>>({});
   const [newEvidenceLabel, setNewEvidenceLabel] = useState('');
   const [newEvidenceUrl, setNewEvidenceUrl] = useState('');
@@ -2382,49 +2384,59 @@ export default function EnhancedNexusPrototype() {
         </section>
 
         <section style={styles.selectorPanel}>
-          <div style={styles.panelLabel}>Entity Type</div>
-          <div style={styles.chipWrap}>
-            {typeOptions.map((type) => (
-              <button
-                key={type}
-                onClick={() => {
-                  setSelectedType(type);
-                  const next = type === 'All' ? entities[0] : entities.find((e) => e.type === type);
-                  if (next) {
-                    setSelectedEntityId(next.id);
-                    setSelectedReportId(next.reports[0]?.id || '');
-                    logAction(`Changed category to ${type} (${next.name})`);
-                  }
-                }}
-                style={{ ...styles.chip, ...(selectedType === type ? styles.chipActive : {}) }}
-              >
-                {type}
-              </button>
-            ))}
+          <div style={styles.row}>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: 14, pointerEvents: 'none', zIndex: 1 }}>🔍</span>
+              <input
+                value={entitySearch}
+                onChange={(e) => { setEntitySearch(e.target.value); setEntitySearchOpen(true); }}
+                onFocus={() => setEntitySearchOpen(true)}
+                onBlur={() => setTimeout(() => setEntitySearchOpen(false), 180)}
+                placeholder={`Search entities… (${entities.length} orgs)`}
+                style={{ ...styles.input, width: '100%', paddingLeft: 32, boxSizing: 'border-box' as const }}
+              />
+              {entitySearchOpen && (
+                <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 200, background: '#0f172a', border: '1px solid #334155', borderRadius: 8, maxHeight: 220, overflowY: 'auto' as const, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
+                  {entities.filter(e => !entitySearch.trim() || e.name.toLowerCase().includes(entitySearch.toLowerCase()) || e.type.toLowerCase().includes(entitySearch.toLowerCase()) || e.region.toLowerCase().includes(entitySearch.toLowerCase())).slice(0, 20).map(entity => (
+                    <button
+                      key={entity.id}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', background: entity.id === selectedEntity.id ? '#1e3a5f' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' as const, color: '#e2e8f0', borderBottom: '1px solid #0f172a' }}
+                      onMouseEnter={e => { if (entity.id !== selectedEntity.id) e.currentTarget.style.background = '#1e293b'; }}
+                      onMouseLeave={e => { if (entity.id !== selectedEntity.id) e.currentTarget.style.background = 'transparent'; }}
+                      onClick={() => {
+                        setSelectedEntityId(entity.id);
+                        setSelectedReportId((reportsByEntity[entity.id] || entity.reports)[0]?.id || '');
+                        setSelectedType(entity.type);
+                        setEntitySearch('');
+                        setEntitySearchOpen(false);
+                        logAction(`Selected entity: ${entity.name}`);
+                      }}
+                    >
+                      <span style={{ fontSize: 9, color: '#93c5fd', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)', padding: '2px 6px', borderRadius: 4, fontWeight: 700, whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{entity.type}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{entity.name}</div>
+                        <div style={{ fontSize: 10, color: '#475569', marginTop: 1 }}>{entity.region} · {entity.status}</div>
+                      </div>
+                      {entity.id === selectedEntity.id && <span style={{ color: '#22c55e', fontSize: 12, flexShrink: 0 }}>✓</span>}
+                    </button>
+                  ))}
+                  {entities.filter(e => !entitySearch.trim() || e.name.toLowerCase().includes(entitySearch.toLowerCase()) || e.type.toLowerCase().includes(entitySearch.toLowerCase())).length === 0 && (
+                    <div style={{ padding: '12px 16px', color: '#475569', fontSize: 12 }}>No entities match "{entitySearch}"</div>
+                  )}
+                </div>
+              )}
+            </div>
+            <button style={styles.arrowBtn} onClick={() => selectEntityByIndexShift(-1)} aria-label="Previous entity">←</button>
+            <button style={styles.arrowBtn} onClick={() => selectEntityByIndexShift(1)} aria-label="Next entity">→</button>
+          </div>
+
+          <div style={{ fontSize: 11, color: '#64748b', marginTop: 4, marginBottom: 2 }}>
+            Active: <span style={{ color: '#e2e8f0', fontWeight: 700 }}>{selectedEntity.name}</span>
+            <span style={{ marginLeft: 8, fontSize: 9, background: 'rgba(59,130,246,0.15)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.25)', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>{selectedEntity.type}</span>
+            <span style={{ marginLeft: 6, fontSize: 9, color: '#475569' }}>{selectedEntity.region}</span>
           </div>
 
           <div style={styles.row}>
-            <div style={styles.entitySwitcher}>
-              <button style={styles.arrowBtn} onClick={() => selectEntityByIndexShift(-1)} aria-label="Previous entity">←</button>
-              <select
-                value={selectedEntity.id}
-                onChange={(e) => {
-                  setSelectedEntityId(e.target.value);
-                  const entity = entities.find((x) => x.id === e.target.value);
-                  if (entity?.reports[0]) setSelectedReportId(entity.reports[0].id);
-                  if (entity) {
-                    setSelectedType(entity.type);
-                    logAction(`Switched entity to ${entity.name}`);
-                  }
-                }}
-                style={styles.select}
-              >
-                {filteredEntities.map((entity) => (
-                  <option key={entity.id} value={entity.id}>{entity.name}</option>
-                ))}
-              </select>
-              <button style={styles.arrowBtn} onClick={() => selectEntityByIndexShift(1)} aria-label="Next entity">→</button>
-            </div>
             <div style={styles.chipWrap}>
               {DASHBOARD_VIEWS.map((item) => {
                 const viewAreaMap: Record<DashboardView, ActionArea> = {
