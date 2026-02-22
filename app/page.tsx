@@ -2051,7 +2051,6 @@ export default function EnhancedNexusPrototype() {
           <div style={styles.showcaseGrid}>
             {categoryCards.map((category) => {
               const hasEntity = entities.some((entity) => entity.type === category.type);
-              const icon = CATEGORY_ICONS[category.type] || '🧩';
               return (
                 <button
                   key={category.type}
@@ -2068,8 +2067,17 @@ export default function EnhancedNexusPrototype() {
                   }}
                   title={hasEntity ? `Open ${category.type}` : `${category.type} demo coming next`}
                 >
-                  <div style={styles.showcaseIconWrap}>
-                    <span style={styles.showcaseIcon} aria-hidden>{icon}</span>
+                  <div style={styles.showcasePhotoWrap}>
+                    <img
+                      src={category.image}
+                      alt={category.type}
+                      style={styles.showcasePhoto}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = categoryFallbackImage(category.type);
+                      }}
+                    />
+                    <div style={styles.showcasePhotoOverlay} />
                   </div>
                   <div style={styles.showcaseBody}>
                     <div style={styles.showcaseTag}>{category.type}</div>
@@ -2673,25 +2681,26 @@ const styles: Record<string, React.CSSProperties> = {
   showcaseHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 10 },
   showcaseGrid: { display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' },
   showcaseCard: {
-    border: '1px solid rgba(148, 163, 184, 0.2)',
-    borderRadius: 16,
+    border: '1px solid rgba(148, 163, 184, 0.18)',
+    borderRadius: 14,
     overflow: 'hidden',
     background: 'rgba(15, 23, 42, 0.78)',
     cursor: 'pointer',
     padding: 0,
-    textAlign: 'center',
+    textAlign: 'left',
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
-    boxShadow: '0 0 0 1px rgba(148, 163, 184, 0.1) inset, 0 1px 0 0 rgba(148, 163, 184, 0.06), 0 4px 24px rgba(0, 0, 0, 0.35)',
-    minHeight: 160,
+    boxShadow: '0 0 0 1px rgba(148, 163, 184, 0.08) inset, 0 4px 20px rgba(0, 0, 0, 0.3)',
     transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
   },
   showcaseIconWrap: { padding: '20px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   showcaseIcon: { fontSize: 48, lineHeight: 1, display: 'block' },
-  showcaseBody: { padding: '8px 16px 20px', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center' },
-  showcaseTag: { color: '#f1f5f9', fontSize: 14, fontWeight: 700, lineHeight: 1.3 },
-  showcaseCaption: { color: '#cbd5e1', fontSize: 13, lineHeight: 1.35 },
+  showcasePhotoWrap: { position: 'relative', width: '100%', height: 110, overflow: 'hidden', flexShrink: 0 },
+  showcasePhoto: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
+  showcasePhotoOverlay: { position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.45) 100%)' },
+  showcaseBody: { padding: '10px 12px 14px', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' },
+  showcaseTag: { color: '#f1f5f9', fontSize: 13, fontWeight: 700, lineHeight: 1.3 },
+  showcaseCaption: { color: '#94a3b8', fontSize: 11, lineHeight: 1.35 },
   setupsPanel: { padding: '24px 0', borderTop: '1px solid #334155' },
   setupsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, maxWidth: 1280, margin: '0 auto' },
   setupCard: {
