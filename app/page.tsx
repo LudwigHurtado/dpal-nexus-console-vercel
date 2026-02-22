@@ -650,10 +650,10 @@ const CATEGORY_INTAKE_FIELDS: Record<EntityType, IntakeField[]> = {
   ],
 };
 
-function portalTabIcon(tab: string): string {
-  if (tab === 'Dashboard') return '📊';
+function portalTabIcon(tab: string, isActive?: boolean): string {
+  if (tab === 'Dashboard') return isActive ? '❓' : '📊';
   if (/Reports?$/i.test(tab) || tab.includes('Case Reports') || tab.includes('Incident')) return '📄';
-  if (tab.includes('Complaints') || tab.includes('Violations') || tab.includes('Conduct') || tab.includes('Integrity')) return '⚠️';
+  if (tab.includes('Complaints') || tab.includes('Violations') || tab.includes('Conduct') || tab.includes('Integrity')) return '👥';
   if (tab.includes('ESG') || tab.includes('Policy') || tab.includes('Compliance')) return '🌿';
   if (tab.includes('Feedback') || tab.includes('Community') || tab.includes('Rider') || tab.includes('Customer') || tab.includes('Parent') || tab.includes('Student') || tab.includes('Resident') || tab.includes('Partner') || tab.includes('Client') || tab.includes('Passenger')) return '💬';
   if (tab.includes('Admin') || tab.includes('Operations') || tab.includes('Field') || tab.includes('Station') || tab.includes('Route') || tab.includes('Hub') || tab.includes('Store') || tab.includes('Terminal') || tab.includes('Network') || tab.includes('Grid') || tab.includes('Outage') || tab.includes('Inspections') || tab.includes('Inter-Agency') || tab.includes('Service Reports') || tab.includes('Clinical') || tab.includes('Campus') || tab.includes('Academic')) return '⚙️';
@@ -1570,6 +1570,251 @@ export default function EnhancedNexusPrototype() {
     }
   }, [activeArea, selectedEntity.id]);
 
+  const renderDashboard = () => {
+    const score = Math.max(60, Math.min(98, Math.round(selectedEntity.confidence * 0.84 + 10)));
+    const delta = Math.max(1, Math.round(selectedEntity.confidence / 24));
+    const negPct = Math.max(8, Math.round((100 - score) * 0.6));
+    const neutPct = Math.max(10, Math.round((100 - score) * 0.4));
+    const posPct = 100 - negPct - neutPct;
+    const scoreRad = (1 - score / 100) * Math.PI;
+    const gCx = 100, gCy = 90, gR = 70;
+    const needleX = Math.round(gCx + gR * Math.cos(scoreRad));
+    const needleY = Math.round(gCy - gR * Math.sin(scoreRad));
+
+    const ongoingIssues = currentReports.slice(0, 4).map((r) => {
+      const badge =
+        r.status === 'Investigating' ? { label: 'Under Investigation', color: '#f97316', bg: 'rgba(249,115,22,0.2)' }
+        : r.status === 'New' ? { label: 'Awaiting Review', color: '#60a5fa', bg: 'rgba(96,165,250,0.15)' }
+        : r.status === 'Action Taken' ? { label: 'Escalated', color: '#ef4444', bg: 'rgba(239,68,68,0.2)' }
+        : { label: 'Pending Response', color: '#14b8a6', bg: 'rgba(20,184,166,0.2)' };
+      return { ...r, badge };
+    });
+
+    const highR = currentReports.filter((r) => r.severity === 'High');
+    const openR = currentReports.filter((r) => r.status !== 'Resolved');
+    const aiAlerts = [
+      {
+        title: highR[0] ? `Rise in: ${highR[0].title.split(' ').slice(0, 4).join(' ')}` : `${activeCategoryType} Risk Pattern Detected`,
+        detail: highR[0] ? `${highR[0].location} — Contact team for immediate review` : 'Review open high-severity cases.',
+      },
+      {
+        title: openR[1] ? `Operations Impact: "${openR[1].title.split(' ').slice(0, 3).join(' ')}"` : 'Infrastructure Structural Hazard',
+        detail: 'Assess and respond promptly. Prevent further escalation.',
+      },
+      {
+        title: `Service Issue Highlighted: "Slow Response Time"`,
+        detail: 'Improve emergency response SLA. Review gap options.',
+      },
+    ];
+
+    const kReports = infoNeeds.slice(0, 4).map((need, i) => ({
+      label: need.label,
+      value: need.value.split(' ')[0],
+      status: i === 0 ? 'Open Reports' : i === 1 ? 'Under Investigation' : i === 2 ? 'In Progress' : 'Unresolved',
+      color: i === 0 ? '#ef4444' : i === 1 ? '#f97316' : i === 2 ? '#3b82f6' : '#f97316',
+    }));
+
+    const sentKeys = [
+      { label: (infoNeeds[0]?.label || 'Housing Issues').split(' ').slice(0, 2).join(' '), pct: 28 },
+      { label: (infoNeeds[1]?.label || 'Public Safety').split(' ').slice(0, 2).join(' '), pct: 17 },
+      { label: (infoNeeds[2]?.label || 'Service Quality').split(' ').slice(0, 2).join(' ') + ' Complaints', pct: 14 },
+    ];
+
+    return (
+      <div style={styles.dashGrid}>
+        {/* LEFT COLUMN */}
+        <div style={styles.dashCol}>
+          <div style={styles.dashCard}>
+            <div style={styles.cardTitle}>Trust &amp; Transparency Score</div>
+            <div style={styles.gaugeWrap}>
+              <svg viewBox="0 0 200 110" style={{ width: '100%', maxWidth: 220 }}>
+                <path d="M 30 90 A 70 70 0 0 0 170 90" stroke="#1e293b" strokeWidth="16" fill="none" strokeLinecap="round" />
+                <path d="M 30 90 A 70 70 0 0 0 43 49" stroke="#ef4444" strokeWidth="16" fill="none" strokeLinecap="round" />
+                <path d="M 43 49 A 70 70 0 0 0 141 33" stroke="#eab308" strokeWidth="16" fill="none" strokeLinecap="round" />
+                <path d="M 141 33 A 70 70 0 0 0 170 90" stroke="#22c55e" strokeWidth="16" fill="none" strokeLinecap="round" />
+                <line x1="100" y1="90" x2={needleX} y2={needleY} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+                <circle cx="100" cy="90" r="5" fill="#fff" />
+                <text x="96" y="82" textAnchor="middle" fontSize="26" fontWeight="800" fill="#fff">{score}</text>
+                <text x="126" y="82" fontSize="12" fill="#94a3b8">/100</text>
+              </svg>
+            </div>
+            <div style={{ color: '#22c55e', fontWeight: 700, textAlign: 'center', fontSize: 13 }}>↑ +{delta} Last 30 Days</div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 8, fontSize: 11 }}>
+              <span><span style={{ color: '#ef4444' }}>● </span><span style={{ color: '#94a3b8' }}>Negative</span></span>
+              <span><span style={{ color: '#eab308' }}>● </span><span style={{ color: '#94a3b8' }}>Neutral</span></span>
+              <span><span style={{ color: '#22c55e' }}>● </span><span style={{ color: '#94a3b8' }}>Positive</span></span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 10 }}>
+              {[{ val: negPct, label: 'Negative', color: '#ef4444' }, { val: neutPct, label: 'Neutral', color: '#eab308' }, { val: posPct, label: 'Positive', color: '#22c55e' }].map((s) => (
+                <div key={s.label} style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.val}%</div>
+                  <div style={{ fontSize: 10, color: '#94a3b8' }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.dashCard}>
+            <div style={styles.cardTitle}>{activeCategoryType} Complaint Map</div>
+            <img
+              src={activeCategoryImage}
+              alt="Heat Map"
+              style={{ width: '100%', height: 170, objectFit: 'cover', borderRadius: 8, marginTop: 8, border: '1px solid #334155' }}
+              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = categoryFallbackImage(activeCategoryType); }}
+            />
+          </div>
+        </div>
+
+        {/* CENTER COLUMN */}
+        <div style={styles.dashColCenter}>
+          <div style={styles.dashCard}>
+            <div style={styles.cardTitle}>Overview of Key Reports</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
+              {kReports.map((kr) => (
+                <div key={kr.label} style={{ border: '1px solid #334155', borderRadius: 10, padding: '10px 12px', background: 'rgba(15,23,42,0.7)' }}>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4, lineHeight: 1.3 }}>{kr.label}</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: kr.color }}>{kr.value}</div>
+                  <div style={{ marginTop: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', background: kr.color + '22', color: kr.color, borderRadius: 4 }}>{kr.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              style={{ ...styles.smallBtnPrimary, width: '100%', marginTop: 12, padding: '11px 0', borderRadius: 8, fontSize: 14 }}
+              onClick={() => { openArea('analytics'); void generateExecutiveBrief(); }}
+            >
+              {executiveBriefLoading ? 'Generating Summary…' : 'Generate Summary Report'}
+            </button>
+          </div>
+
+          <div style={{ ...styles.dashCard, flex: 1 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div style={styles.cardTitle}>{activeCategoryType} Complaint Heat Map</div>
+              <span style={{ fontSize: 11, color: '#94a3b8' }}>≡ {selectedEntity.region}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 8, fontSize: 11, color: '#94a3b8', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span>● Complaints by District</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: '#eab308', borderRadius: 2, display: 'inline-block' }} /> Low</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: '#f97316', borderRadius: 2, display: 'inline-block' }} /> Medium</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: '#ef4444', borderRadius: 2, display: 'inline-block' }} /> High</span>
+            </div>
+            <img
+              src={activeCategoryImage}
+              alt="Complaint Map"
+              style={{ width: '100%', height: 210, objectFit: 'cover', borderRadius: 10, border: '1px solid #334155' }}
+              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = categoryFallbackImage(activeCategoryType); }}
+            />
+            <button
+              style={{ ...styles.smallBtn, marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}
+              onClick={() => { openArea('analytics'); setInteractionMessage('Map details view opened — Analytics loaded.'); }}
+            >
+              View Details →
+            </button>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN */}
+        <div style={styles.dashCol}>
+          <div style={styles.dashCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={styles.cardTitle}>Ongoing Issues</div>
+              <button style={{ ...styles.smallBtn, fontSize: 11, padding: '4px 8px' }} onClick={() => openArea('reports')}>View All →</button>
+            </div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {ongoingIssues.map((issue) => (
+                <div key={issue.id} style={{ borderBottom: '1px solid #1e293b', paddingBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                    <div style={{ flex: 1 }}>
+                      <button
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}
+                        onClick={() => { setSelectedReportId(issue.id); openArea('reports'); }}
+                      >
+                        <span style={{ fontWeight: 700, fontSize: 12, color: '#f1f5f9' }}>{issue.id}</span>
+                        <span style={{ fontSize: 12, color: '#cbd5e1', marginLeft: 5 }}>{issue.title.slice(0, 22)}{issue.title.length > 22 ? '…' : ''}</span>
+                      </button>
+                      <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{issue.location}</div>
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 5, background: issue.badge.bg, color: issue.badge.color, whiteSpace: 'nowrap' }}>
+                      {issue.badge.label}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.dashCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={styles.cardTitle}>AI Advisor</div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {[profile.color, '#334155', '#334155'].map((c, i) => (
+                  <span key={i} style={{ width: 7, height: 7, borderRadius: 999, background: c, display: 'inline-block' }} />
+                ))}
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: '#93c5fd', fontWeight: 700, marginBottom: 8 }}>Risk Alerts</div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {aiAlerts.map((alert, i) => (
+                <div key={i} style={{ borderLeft: `2px solid ${i === 0 ? '#ef4444' : '#334155'}`, paddingLeft: 8 }}>
+                  <div style={{ fontWeight: 700, fontSize: 12, color: '#f1f5f9' }}>{alert.title}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{alert.detail}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.dashCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={styles.cardTitle}>Public Sentiment Analysis</div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {['#334155', '#334155'].map((c, i) => <span key={i} style={{ width: 7, height: 7, borderRadius: 999, background: c, display: 'inline-block' }} />)}
+              </div>
+            </div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {sentKeys.map((kw) => (
+                <div key={kw.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontSize: 12, color: '#cbd5e1', minWidth: 100, lineHeight: 1.2 }}>● {kw.label}</div>
+                  <div style={{ flex: 1, height: 5, borderRadius: 999, background: '#1e293b', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${kw.pct * 2.5}%`, background: 'linear-gradient(90deg,#3b82f6,#22c55e)', borderRadius: 999 }} />
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#f1f5f9', minWidth: 28 }}>{kw.pct}%</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.dashCard}>
+            <div style={styles.cardTitle}>🔌 Endpoint Readiness</div>
+            <div style={{ display: 'grid', gap: 5, marginTop: 8 }}>
+              {Object.entries(endpointStatus).map(([key, status]) => (
+                <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                  <span style={{ color: '#94a3b8' }}>{key}</span>
+                  <span style={{ color: status === 'ok' ? '#22c55e' : status === 'fail' ? '#ef4444' : '#475569', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: 999, background: status === 'ok' ? '#22c55e' : status === 'fail' ? '#ef4444' : '#334155', display: 'inline-block' }} />
+                    {status.toUpperCase()}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+              <input
+                value={apiBaseInput}
+                onChange={(e) => setApiBaseInput(e.target.value)}
+                placeholder="https://api.railway.app"
+                style={{ ...styles.input, flex: 1, fontSize: 11, padding: '6px 8px' }}
+              />
+              <button style={{ ...styles.smallBtnPrimary, padding: '6px 12px', fontSize: 11 }} onClick={() => void testIntegration()}>
+                {isSyncing ? '…' : 'Test'}
+              </button>
+            </div>
+            {syncMessage && <div style={{ fontSize: 10, color: syncMessage.includes('ok') || syncMessage.includes('✓') ? '#22c55e' : '#f97316', marginTop: 4 }}>{syncMessage}</div>}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderEntityLayout = () => {
     const openCount = counts.total - counts.byStatus.Resolved;
     const categoryScore = Math.max(68, Math.min(96, 70 + selectedEntity.confidence - Math.floor(openCount / 3)));
@@ -1678,30 +1923,51 @@ export default function EnhancedNexusPrototype() {
 
         <section style={styles.portalShell}>
           <div style={styles.portalTopBar}>
-            <div>
-              <div style={styles.portalBrand}>DPAL  |  {selectedEntity.type} Accountability Portal</div>
-              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{selectedEntity.name} · {selectedEntity.region}</div>
+            <div style={styles.portalBrandRow}>
+              <div style={styles.portalLogo}>D</div>
+              <div>
+                <div style={styles.portalBrand}>DPAL</div>
+                <div style={styles.portalSubtitle}>{selectedEntity.type} Accountability Portal</div>
+                <div style={styles.portalEntityMeta}>{selectedEntity.name} · {selectedEntity.region}</div>
+              </div>
             </div>
-            <div style={styles.portalRisk}>Risk Level <span style={{ color: profile.color, fontWeight: 800 }}>{selectedEntity.confidence >= 90 ? 'LOW' : selectedEntity.confidence >= 80 ? 'MODERATE' : 'ELEVATED'}</span></div>
+            <div style={styles.portalRightRow}>
+              <div style={{
+                ...styles.portalRiskPill,
+                backgroundColor: selectedEntity.confidence >= 90 ? 'rgba(34,197,94,0.2)' : selectedEntity.confidence >= 80 ? 'rgba(249,115,22,0.25)' : 'rgba(239,68,68,0.2)',
+                borderColor: selectedEntity.confidence >= 90 ? '#22c55e' : selectedEntity.confidence >= 80 ? '#f97316' : '#ef4444',
+              }}>
+                <span style={{ fontSize: 14 }} aria-hidden>🛡️</span>
+                <span>Risk Level: <strong style={{ color: profile.color }}>{selectedEntity.confidence >= 90 ? 'LOW' : selectedEntity.confidence >= 80 ? 'MODERATE' : 'ELEVATED'}</strong></span>
+              </div>
+              <div style={styles.portalUserRow}>
+                <div style={styles.portalAvatar} aria-hidden>{(selectedEntity.name || 'A').charAt(0)}</div>
+                <span style={styles.portalUserLabel}>{portalTabs.find((t) => t.toLowerCase().includes('admin')) || 'Admin'}</span>
+                <span style={{ color: '#94a3b8', fontSize: 10 }}>▼</span>
+              </div>
+            </div>
           </div>
           <div style={styles.portalTabs}>
-            {portalTabs.map((tab) => (
-              <button
-                key={`portal-tab-${tab}`}
-                style={{
-                  ...styles.portalTab,
-                  ...(activePortalTab === tab ? { ...styles.portalTabActive, borderBottomColor: profile.color } : {}),
-                }}
-                onClick={() => {
-                  setActivePortalTab(tab);
-                  openArea(getAreaForPortalTab(tab));
-                  setInteractionMessage(`${tab} — ${selectedEntity.name} (${selectedEntity.type}). Content updated.`);
-                }}
-              >
-                <span style={{ fontSize: 16 }} aria-hidden>{portalTabIcon(tab)}</span>
-                {tab}
-              </button>
-            ))}
+            {portalTabs.map((tab) => {
+              const isActive = activePortalTab === tab;
+              return (
+                <button
+                  key={`portal-tab-${tab}`}
+                  style={{
+                    ...styles.portalTab,
+                    ...(isActive ? styles.portalTabActive : {}),
+                  }}
+                  onClick={() => {
+                    setActivePortalTab(tab);
+                    openArea(getAreaForPortalTab(tab));
+                    setInteractionMessage(`${tab} — ${selectedEntity.name} (${selectedEntity.type}). Content updated.`);
+                  }}
+                >
+                  <span style={{ fontSize: 15 }} aria-hidden>{portalTabIcon(tab, isActive)}</span>
+                  {tab}
+                </button>
+              );
+            })}
           </div>
         </section>
 
@@ -1814,6 +2080,10 @@ export default function EnhancedNexusPrototype() {
             })}
           </div>
         </section>
+
+        {activePortalTab === 'Dashboard' && renderDashboard()}
+
+        {activePortalTab !== 'Dashboard' && (<>
 
         <section style={styles.heroImageCard}>
           <img
@@ -1941,13 +2211,6 @@ export default function EnhancedNexusPrototype() {
             </button>
           ))}
         </section>
-
-        {interactionMessage && (
-          <section style={styles.interactionBanner}>
-            <strong>Interaction:</strong> {interactionMessage}
-            <button type="button" aria-label="Dismiss" onClick={() => setInteractionMessage('')} style={styles.interactionDismiss}>×</button>
-          </section>
-        )}
 
         <section style={styles.voicePanel}>
           <div>
@@ -2325,6 +2588,15 @@ export default function EnhancedNexusPrototype() {
           </div>
         </section>
 
+        </>)}
+
+        {interactionMessage && (
+          <section style={styles.interactionBanner}>
+            <strong>Interaction:</strong> {interactionMessage}
+            <button type="button" aria-label="Dismiss" onClick={() => setInteractionMessage('')} style={styles.interactionDismiss}>×</button>
+          </section>
+        )}
+
         <section style={styles.setupsPanel}>
           <div style={styles.setupsGrid}>
             {SETUP_CARDS.map((setup) => (
@@ -2372,13 +2644,21 @@ const styles: Record<string, React.CSSProperties> = {
   title: { margin: 0, fontSize: 30, fontWeight: 900 },
   subtitle: { margin: 0, color: '#94a3b8' },
   primaryBtn: { border: '1px solid #2563eb', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', color: '#fff', borderRadius: 10, padding: '10px 12px', fontWeight: 700, cursor: 'pointer' },
-  portalShell: { border: '1px solid #334155', borderRadius: 14, padding: 12, background: 'linear-gradient(145deg, rgba(9,17,32,0.95), rgba(8,12,20,0.9))', display: 'grid', gap: 10 },
-  portalTopBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  portalBrand: { color: '#dbeafe', fontWeight: 800, fontSize: 16 },
-  portalRisk: { color: '#94a3b8', fontSize: 13 },
-  portalTabs: { display: 'flex', gap: 0, flexWrap: 'wrap', borderBottom: '1px solid #334155', marginTop: 4 },
-  portalTab: { border: 'none', borderBottom: '3px solid transparent', background: 'transparent', color: '#94a3b8', borderRadius: 0, padding: '12px 16px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 },
-  portalTabActive: { background: 'rgba(148, 163, 184, 0.12)', color: '#f1f5f9', borderBottomColor: '#3b82f6' },
+  portalShell: { border: '1px solid #334155', borderRadius: 16, padding: 16, background: 'linear-gradient(145deg, rgba(9,17,32,0.98), rgba(8,12,20,0.95))', display: 'grid', gap: 14 },
+  portalTopBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
+  portalBrandRow: { display: 'flex', alignItems: 'center', gap: 12 },
+  portalLogo: { width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: '#fff', fontSize: 20, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(59,130,246,0.4)' },
+  portalBrand: { color: '#fff', fontWeight: 800, fontSize: 18, letterSpacing: 0.5 },
+  portalSubtitle: { color: '#94a3b8', fontSize: 13, marginTop: 2 },
+  portalEntityMeta: { color: '#64748b', fontSize: 11, marginTop: 2 },
+  portalRightRow: { display: 'flex', alignItems: 'center', gap: 12 },
+  portalRiskPill: { display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, border: '1px solid', color: '#e2e8f0', fontSize: 12 },
+  portalUserRow: { display: 'flex', alignItems: 'center', gap: 8 },
+  portalAvatar: { width: 32, height: 32, borderRadius: 999, background: '#334155', color: '#94a3b8', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  portalUserLabel: { color: '#cbd5e1', fontSize: 13, fontWeight: 600 },
+  portalTabs: { display: 'flex', gap: 8, flexWrap: 'wrap' },
+  portalTab: { border: '1px solid #334155', background: 'rgba(15,23,42,0.6)', color: '#94a3b8', borderRadius: 999, padding: '10px 16px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 },
+  portalTabActive: { background: '#2563eb', borderColor: '#2563eb', color: '#fff' },
   selectorPanel: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)', display: 'grid', gap: 10 },
   panelLabel: { fontSize: 12, color: '#93c5fd', textTransform: 'uppercase', fontWeight: 800 },
   chipWrap: { display: 'flex', flexWrap: 'wrap', gap: 8 },
@@ -2474,6 +2754,11 @@ const styles: Record<string, React.CSSProperties> = {
   endpointItem: { border: '1px solid #334155', borderRadius: 8, padding: '6px 8px', display: 'flex', justifyContent: 'space-between', background: '#0f172a', fontSize: 12, color: '#cbd5e1' },
   interactionBanner: { border: '1px solid #2563eb', borderRadius: 10, padding: '8px 12px', background: 'rgba(37,99,235,0.12)', color: '#dbeafe', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   interactionDismiss: { background: 'transparent', border: 'none', color: '#93c5fd', fontSize: 18, cursor: 'pointer', padding: '0 4px', lineHeight: 1 },
+  dashGrid: { display: 'grid', gridTemplateColumns: '1fr 1.7fr 1fr', gap: 14, alignItems: 'start' },
+  dashCol: { display: 'flex', flexDirection: 'column', gap: 12 },
+  dashColCenter: { display: 'flex', flexDirection: 'column', gap: 12 },
+  dashCard: { border: '1px solid #1e293b', borderRadius: 14, padding: 16, background: 'linear-gradient(145deg, rgba(11,18,32,0.96), rgba(8,12,20,0.92))' },
+  gaugeWrap: { display: 'flex', justifyContent: 'center', marginTop: 8 },
   voicePanel: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: 'rgba(11,18,32,0.86)', display: 'grid', gap: 8 },
   sectionBtn: { border: '1px solid #334155', background: '#0f172a', color: '#cbd5e1', borderRadius: 9, padding: '8px 10px', cursor: 'pointer', fontWeight: 700 },
   sectionBtnActive: { borderColor: '#2563eb', background: '#1d4ed8', color: '#fff' },
