@@ -2994,188 +2994,304 @@ export default function EnhancedNexusPrototype() {
           </div>
 
           <div style={styles.card}>
-            <h3 style={styles.cardTitle}>Selected Report Detail</h3>
-            {selectedReport ? (
-              <>
-                <div style={styles.valueStat}><span>Report ID</span><strong>{selectedReport.id}</strong></div>
-                <div style={styles.valueStat}><span>Status</span><strong>{selectedReport.status}</strong></div>
-                <div style={styles.valueStat}><span>Channel</span><strong>{selectedReport.channel}</strong></div>
-                <div style={styles.valueStat}><span>Severity</span><strong>{selectedReport.severity}</strong></div>
-                <div style={styles.valueStat}><span>ETA</span><strong>{selectedReport.eta}</strong></div>
-                <div style={styles.valueStat}><span>Assigned To</span><strong>{selectedReport.assignedTo || 'Unassigned'}</strong></div>
-                <div style={styles.valueStat}><span>Last Action Note</span><strong>{selectedReport.lastActionNote || '—'}</strong></div>
-                <p style={{ color: '#cbd5e1', marginTop: 12 }}>{selectedReport.summary}</p>
-
-                <div style={styles.recommendCard}>
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Recommended Referrals</div>
-                  <div style={styles.referRow}>
-                    {referralTargets(selectedReport).map((target) => (
-                      <button key={`detail-${selectedReport.id}-${target}`} style={styles.referBtn} onClick={() => void quickRefer(selectedReport, target)}>
-                        {target}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={styles.aiCard}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                    <div style={{ fontWeight: 800 }}>AI Copilot</div>
-                    <button style={styles.smallBtn} onClick={() => void runAiForReport(selectedReport)}>
-                      {aiLoadingFor === selectedReport.id ? 'Analyzing…' : 'Run AI Analysis'}
-                    </button>
-                  </div>
-
-                  {aiByReportId[selectedReport.id] && (
-                    <>
-                      <div style={styles.aiGrid}>
-                        <div style={styles.aiItem}><span>Suggested Severity</span><strong>{aiByReportId[selectedReport.id].severitySuggested}</strong></div>
-                        <div style={styles.aiItem}><span>Route To</span><strong>{aiByReportId[selectedReport.id].routeTo}</strong></div>
-                        <div style={styles.aiItem}><span>SLA Target</span><strong>{aiByReportId[selectedReport.id].slaHours}h</strong></div>
-                        <div style={styles.aiItem}><span>Provider</span><strong>{aiByReportId[selectedReport.id].provider || 'ai'}</strong></div>
+            {selectedReport ? (() => {
+              let hash = 0;
+              for (let i = 0; i < selectedReport.id.length; i++) hash = (hash * 31 + selectedReport.id.charCodeAt(i)) & 0xffff;
+              const baseMs = 1739980800000 + (hash % 604800000);
+              const baseDt = new Date(baseMs);
+              const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+              const fmtFull = (d: Date) => d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+              const officers = referralTargets(selectedReport);
+              const caseRef = `DPAL-${selectedEntity.region}-${selectedReport.id}`;
+              const reportUrl = `https://dpal-nexus.io/reports/${selectedReport.id}`;
+              const sevColor = selectedReport.severity === 'High' ? '#ef4444' : selectedReport.severity === 'Moderate' ? '#f97316' : '#22c55e';
+              const statusColor = selectedReport.status === 'Resolved' ? '#22c55e' : selectedReport.status === 'Action Taken' ? '#f97316' : selectedReport.status === 'Investigating' ? '#3b82f6' : '#94a3b8';
+              const autoEvidence = [
+                { id: 'ev1', type: 'photo', label: `Photo_Evidence_${selectedReport.id}_001.jpg`, url: `https://picsum.photos/seed/${selectedReport.id}a/800/500`, addedAt: fmtFull(baseDt) },
+                { id: 'ev2', type: 'photo', label: `Photo_Evidence_${selectedReport.id}_002.jpg`, url: `https://picsum.photos/seed/${selectedReport.id}b/800/500`, addedAt: fmtFull(new Date(baseMs + 3600000)) },
+                { id: 'ev3', type: 'document', label: `Field_Report_${selectedReport.id}.pdf`, url: `#demo-pdf-${selectedReport.id}`, addedAt: fmtFull(new Date(baseMs + 7200000)) },
+                { id: 'ev4', type: 'data', label: `Incident_Data_${selectedReport.id}.csv`, url: `#demo-csv-${selectedReport.id}`, addedAt: fmtFull(new Date(baseMs + 10800000)) },
+              ].slice(0, 2 + (hash % 3));
+              const userEv = userEvidenceByReport[selectedReport.id] || [];
+              const allEvidence = [...autoEvidence, ...userEv];
+              const tlSteps = [
+                { label: `Report submitted via ${selectedReport.channel}`, actor: 'System', note: 'Auto-assigned reference number and timestamp.', done: true, date: fmtFull(baseDt) },
+                { label: 'AI triage completed', actor: 'DPAL AI Engine', note: `Severity classified as ${selectedReport.severity}. SLA clock started.`, done: true, date: fmtFull(new Date(baseMs + 900000)) },
+                { label: `Case assigned to ${officers[0] || 'Operations Team'}`, actor: 'Case Coordinator', note: 'Assignment notification sent.', done: selectedReport.status !== 'New', date: fmtFull(new Date(baseMs + 3600000)) },
+                { label: 'Field investigation underway', actor: officers[0] || 'Field Team', note: 'On-site inspection and documentation in progress.', done: selectedReport.status === 'Action Taken' || selectedReport.status === 'Resolved', date: fmtFull(new Date(baseMs + 18000000)) },
+                { label: 'Corrective action implemented', actor: officers[1] || 'Operations Supervisor', note: 'Mitigation measures applied and verified.', done: selectedReport.status === 'Resolved', date: fmtFull(new Date(baseMs + 86400000)) },
+                { label: 'Case closed — final report filed', actor: officers[2] || 'Department Head', note: 'Archived in DPAL Nexus and regulatory log.', done: selectedReport.status === 'Resolved', date: fmtFull(new Date(baseMs + 172800000)) },
+              ];
+              const relatedCases = currentReports.filter(r => r.id !== selectedReport.id && r.severity === selectedReport.severity).slice(0, 3);
+              const AI = aiByReportId[selectedReport.id];
+              const reportedBy = hash % 3 === 0 ? 'Citizen (Identity Verified)' : hash % 3 === 1 ? 'Field Inspector' : 'Anonymous Citizen';
+              return (
+                <div>
+                  {/* ── Official Report Header ── */}
+                  <div style={{ background: `linear-gradient(135deg, ${sevColor}18, rgba(15,23,42,0.98))`, border: `1px solid ${sevColor}44`, borderRadius: '10px 10px 0 0', padding: '14px 16px', marginBottom: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                          <div style={{ width: 28, height: 28, background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 14, color: '#fff', flexShrink: 0 }}>D</div>
+                          <div>
+                            <div style={{ fontSize: 9, color: '#64748b', fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase' }}>DPAL Nexus Accountability Platform</div>
+                            <div style={{ fontSize: 9, color: '#475569' }}>Official Incident Report · {selectedEntity.type}</div>
+                          </div>
+                        </div>
+                        <div style={{ fontWeight: 900, fontSize: 15, color: '#f1f5f9', lineHeight: 1.3 }}>{selectedReport.title}</div>
+                        <div style={{ fontSize: 10, color: '#64748b', marginTop: 3 }}>Case Ref: <span style={{ color: '#93c5fd', fontFamily: 'monospace', fontWeight: 700 }}>{caseRef}</span></div>
                       </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                        <span style={{ background: `${sevColor}22`, color: sevColor, border: `1px solid ${sevColor}55`, padding: '3px 10px', borderRadius: 999, fontWeight: 800, fontSize: 11 }}>⚡ {selectedReport.severity.toUpperCase()} RISK</span>
+                        <span style={{ background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`, padding: '2px 8px', borderRadius: 999, fontWeight: 700, fontSize: 10 }}>{selectedReport.status.toUpperCase()}</span>
+                      </div>
+                    </div>
+                  </div>
 
-                      <p style={{ color: '#cbd5e1', marginTop: 8 }}>{aiByReportId[selectedReport.id].rationale}</p>
-
-                      <div style={styles.referRow}>
-                        {aiByReportId[selectedReport.id].nextActions.map((a) => (
-                          <button
-                            key={`${selectedReport.id}-${a.label}`}
-                            style={styles.referBtnPrimary}
-                            onClick={() => void updateReportStatus(selectedReport.id, a.status, { assignedTo: aiByReportId[selectedReport.id].routeTo, note: a.note })}
-                          >
-                            {a.label}
-                          </button>
+                  <div style={{ border: `1px solid ${sevColor}22`, borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden', marginBottom: 12 }}>
+                    {/* §1 Overview */}
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e293b' }}>
+                      <div style={styles.officialSectionLabel}>§ 1 — Incident Overview</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 14px', marginTop: 8 }}>
+                        {([
+                          ['Report ID', selectedReport.id],
+                          ['Case Reference', caseRef],
+                          ['Entity', selectedEntity.name],
+                          ['Jurisdiction', selectedEntity.region],
+                          ['Department', officers[0] || 'Operations'],
+                          ['Case Officer', selectedReport.assignedTo || officers[0] || 'Pending'],
+                          ['Incident Date', fmtDate(new Date(baseMs - 86400000 * (hash % 2)))],
+                          ['Filed On', fmtFull(baseDt)],
+                          ['Last Updated', fmtFull(new Date(baseMs + 3600000 * ((hash % 8) + 1)))],
+                          ['Channel', selectedReport.channel],
+                          ['Location', selectedReport.location],
+                          ['Reported By', reportedBy],
+                          ['ETA / Resolution', selectedReport.eta],
+                          ['Classification', `${selectedReport.severity} Risk · ${selectedEntity.type}`],
+                        ] as [string, string][]).map(([label, val]) => (
+                          <div key={label} style={{ borderBottom: '1px solid #0f172a', paddingBottom: 4 }}>
+                            <div style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.5 }}>{label}</div>
+                            <div style={{ fontSize: 11, color: '#e2e8f0', fontWeight: 600, marginTop: 1 }}>{val}</div>
+                          </div>
                         ))}
                       </div>
+                    </div>
 
-                      {!!aiByReportId[selectedReport.id].similar?.length && (
-                        <div style={{ marginTop: 10 }}>
-                          <div style={{ fontSize: 12, color: '#93c5fd', marginBottom: 4 }}>Similar Cases</div>
-                          <div style={{ display: 'grid', gap: 6 }}>
-                            {aiByReportId[selectedReport.id].similar?.map((s) => (
-                              <button key={`${selectedReport.id}-sim-${s.id}`} style={styles.similarBtn} onClick={() => setSelectedReportId(s.id)}>
-                                {s.id} • {s.title} ({Math.round((s.score || 0) * 100)}%)
-                              </button>
+                    {/* §2 Description */}
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e293b' }}>
+                      <div style={styles.officialSectionLabel}>§ 2 — Incident Description</div>
+                      <p style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 1.7, marginTop: 8, marginBottom: 0 }}>{selectedReport.summary}</p>
+                      {selectedReport.lastActionNote && (
+                        <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 6, fontSize: 11, color: '#93c5fd' }}>
+                          <span style={{ fontWeight: 700, display: 'block', marginBottom: 3 }}>Latest Action Note:</span>
+                          {selectedReport.lastActionNote}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* §3 Evidence */}
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e293b' }}>
+                      <div style={styles.officialSectionLabel}>§ 3 — Evidence &amp; Attachments ({allEvidence.length})</div>
+                      <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+                        {allEvidence.map((ev) => {
+                          const icon = ev.type === 'photo' ? '📷' : ev.type === 'document' ? '📄' : ev.type === 'video' ? '🎥' : '📊';
+                          const isReal = ev.url.startsWith('http');
+                          return (
+                            <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: 'rgba(15,23,42,0.7)', border: '1px solid #1e293b', borderRadius: 6 }}>
+                              <span style={{ fontSize: 16, flexShrink: 0 }}>{icon}</span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 11, color: '#e2e8f0', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.label}</div>
+                                <div style={{ fontSize: 9, color: '#475569', marginTop: 1 }}>Added: {ev.addedAt}</div>
+                              </div>
+                              <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+                                <button style={{ ...styles.referBtn, fontSize: 9, padding: '2px 7px' }} onClick={() => { if (isReal) { window.open(ev.url, '_blank'); } else { setInteractionMessage(`Demo file: ${ev.label} — connect Railway backend to serve actual files.`); } }}>
+                                  {ev.type === 'photo' ? 'View' : 'Open'}
+                                </button>
+                                <button style={{ ...styles.referBtn, fontSize: 9, padding: '2px 7px' }} onClick={() => { void navigator.clipboard?.writeText(isReal ? ev.url : `https://files.dpal-nexus.io/evidence/${selectedReport.id}/${encodeURIComponent(ev.label)}`); setInteractionMessage(`Link copied: ${ev.label}`); }}>
+                                  Copy
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {/* Add evidence */}
+                      <div style={{ marginTop: 8, border: '1px dashed #334155', borderRadius: 6, padding: '8px 10px', background: 'rgba(15,23,42,0.4)' }}>
+                        <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, marginBottom: 6 }}>+ Attach Evidence</div>
+                        <div style={{ display: 'grid', gap: 5 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 5 }}>
+                            <input value={newEvidenceLabel} onChange={e => setNewEvidenceLabel(e.target.value)} placeholder="File label (e.g. Photo_Site_001.jpg)" style={{ ...styles.input, fontSize: 10 }} />
+                            <select value={newEvidenceType} onChange={e => setNewEvidenceType(e.target.value as 'photo' | 'document' | 'data' | 'video')} style={{ ...styles.input, fontSize: 10 }}>
+                              <option value="photo">📷 Photo</option>
+                              <option value="document">📄 Document</option>
+                              <option value="data">📊 Data</option>
+                              <option value="video">🎥 Video</option>
+                            </select>
+                          </div>
+                          <div style={{ display: 'flex', gap: 5 }}>
+                            <input value={newEvidenceUrl} onChange={e => setNewEvidenceUrl(e.target.value)} placeholder="URL (optional — leave blank for auto)" style={{ ...styles.input, fontSize: 10, flex: 1 }} />
+                            <button style={{ ...styles.smallBtnPrimary, fontSize: 10, whiteSpace: 'nowrap' }} onClick={() => {
+                              if (!newEvidenceLabel.trim()) { setInteractionMessage('Enter a file label first.'); return; }
+                              const ev = { id: `uev-${Date.now()}`, type: newEvidenceType, label: newEvidenceLabel.trim(), url: newEvidenceUrl.trim() || `https://files.dpal-nexus.io/evidence/${selectedReport.id}/${encodeURIComponent(newEvidenceLabel.trim())}`, addedAt: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) };
+                              setUserEvidenceByReport(prev => ({ ...prev, [selectedReport.id]: [...(prev[selectedReport.id] || []), ev] }));
+                              setNewEvidenceLabel(''); setNewEvidenceUrl('');
+                              logAction(`Evidence attached to ${selectedReport.id}: ${ev.label}`);
+                              setInteractionMessage(`Evidence attached: ${ev.label}`);
+                            }}>Attach</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* §4 Timeline */}
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e293b' }}>
+                      <div style={styles.officialSectionLabel}>§ 4 — Case Timeline</div>
+                      <div style={{ display: 'grid', gap: 0, marginTop: 10 }}>
+                        {tlSteps.map((step, i) => (
+                          <div key={i} style={{ display: 'flex', gap: 10, paddingBottom: i < tlSteps.length - 1 ? 12 : 0 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                              <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${step.done ? '#22c55e' : '#334155'}`, background: step.done ? '#22c55e' : '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: step.done ? '#fff' : '#334155', fontWeight: 700 }}>
+                                {step.done ? '✓' : i + 1}
+                              </div>
+                              {i < tlSteps.length - 1 && <div style={{ width: 2, flex: 1, background: step.done ? '#22c55e44' : '#1e293b', marginTop: 2 }} />}
+                            </div>
+                            <div style={{ flex: 1, paddingTop: 1 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: step.done ? '#f1f5f9' : '#475569' }}>{step.label}</div>
+                              <div style={{ fontSize: 9, color: '#475569', marginTop: 1 }}>{step.date} · {step.actor}</div>
+                              {step.done && step.note && <div style={{ fontSize: 10, color: '#64748b', marginTop: 2, fontStyle: 'italic' }}>{step.note}</div>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* §5 Related Cases */}
+                    {relatedCases.length > 0 && (
+                      <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e293b' }}>
+                        <div style={styles.officialSectionLabel}>§ 5 — Related Cases ({relatedCases.length})</div>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                          {relatedCases.map(r => (
+                            <button key={r.id} style={{ ...styles.referBtn, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '5px 8px', borderRadius: 6, textAlign: 'left' }} onClick={() => { setSelectedReportId(r.id); setInteractionMessage(`Switched to related case: ${r.id}`); }}>
+                              <span style={{ fontWeight: 700, fontSize: 10 }}>{r.id}</span>
+                              <span style={{ fontSize: 9, color: '#64748b', marginTop: 1 }}>{r.title.slice(0, 28)}{r.title.length > 28 ? '…' : ''}</span>
+                              <span style={{ fontSize: 9, color: r.severity === 'High' ? '#ef4444' : '#f97316', marginTop: 1 }}>{r.severity}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* §6 AI Risk Analysis */}
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e293b' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={styles.officialSectionLabel}>§ 6 — AI Risk Analysis</div>
+                        <button style={{ ...styles.smallBtn, fontSize: 9, padding: '2px 7px' }} onClick={() => void runAiForReport(selectedReport)}>{aiLoadingFor === selectedReport.id ? 'Analyzing…' : AI ? 'Re-analyze' : 'Run AI'}</button>
+                      </div>
+                      {AI ? (
+                        <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 5 }}>
+                            {([['Severity', AI.severitySuggested], ['Route To', AI.routeTo], ['SLA', `${AI.slaHours}h`], ['Engine', AI.provider || 'local']] as [string,string][]).map(([l, v]) => (
+                              <div key={l} style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 6, padding: '5px 7px' }}>
+                                <div style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase', fontWeight: 700 }}>{l}</div>
+                                <div style={{ fontSize: 11, color: '#e2e8f0', fontWeight: 700, marginTop: 2 }}>{v}</div>
+                              </div>
+                            ))}
+                          </div>
+                          <p style={{ color: '#94a3b8', fontSize: 11, lineHeight: 1.6, margin: 0 }}>{AI.rationale}</p>
+                          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                            {AI.nextActions.map(a => (
+                              <button key={a.label} style={styles.referBtnPrimary} onClick={() => void updateReportStatus(selectedReport.id, a.status, { assignedTo: AI.routeTo, note: a.note })}>{a.label}</button>
+                            ))}
+                          </div>
+                          {!!AI.similar?.length && (
+                            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                              {AI.similar?.map(s => (
+                                <button key={s.id} style={{ ...styles.referBtn, fontSize: 10 }} onClick={() => setSelectedReportId(s.id)}>{s.id} · {Math.round((s.score || 0) * 100)}% match</button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p style={{ color: '#475569', fontSize: 11, marginTop: 6 }}>Run AI Analysis to get severity suggestion, routing, and SLA guidance.</p>
+                      )}
+                    </div>
+
+                    {/* §7 Referrals & Response */}
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e293b' }}>
+                      <div style={styles.officialSectionLabel}>§ 7 — Referrals &amp; Response</div>
+                      <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 10, color: '#475569', fontWeight: 700, marginBottom: 4 }}>REFER TO:</div>
+                          <div style={styles.referRow}>
+                            {referralTargets(selectedReport).map(target => (
+                              <button key={target} style={styles.referBtn} onClick={() => void quickRefer(selectedReport, target)}>{target}</button>
                             ))}
                           </div>
                         </div>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                <div style={{ ...styles.recommendCard, marginTop: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <div style={{ fontWeight: 700 }}>Playbooks &amp; Resources ({activeCategoryType})</div>
-                    {mockLinkResponse && (
-                      <button style={{ ...styles.smallBtn, fontSize: 10, padding: '3px 8px' }} onClick={() => setMockLinkResponse('')}>Clear</button>
-                    )}
-                  </div>
-                  <div style={styles.referRow}>
-                    {categoryLinks(activeCategoryType).map((link) => (
-                      <button
-                        key={`${selectedEntity.type}-${link.label}`}
-                        style={styles.referBtn}
-                        onClick={() => openMockCategoryLink(link.label, link.action)}
-                      >
-                        📋 {link.label}
-                      </button>
-                    ))}
-                  </div>
-                  {mockLinkResponse && (
-                    <div style={{ marginTop: 10, border: '1px solid #22c55e44', borderRadius: 8, padding: '10px 12px', background: 'rgba(34,197,94,0.04)' }}>
-                      <div style={{ fontSize: 10, color: '#22c55e', fontWeight: 700, marginBottom: 6 }}>✓ LOADED</div>
-                      <pre style={{ ...styles.briefText, border: 'none', background: 'transparent', padding: 0, margin: 0 }}>{mockLinkResponse}</pre>
+                        <div>
+                          <div style={{ fontSize: 10, color: '#475569', fontWeight: 700, marginBottom: 4 }}>RESPONSE TEMPLATES:</div>
+                          <div style={styles.referRow}>
+                            <button style={styles.referBtn} onClick={() => setActionNote('Initial response issued. Responsible team assigned and ETA communicated to all parties.')}>Initial Response</button>
+                            <button style={styles.referBtn} onClick={() => setActionNote('Evidence request issued. Photo documentation and supporting materials requested from all parties.')}>Evidence Request</button>
+                            <button style={styles.referBtn} onClick={() => setActionNote('Escalation notice issued to legal/compliance. Case elevated due to risk profile and jurisdictional requirements.')}>Escalation Notice</button>
+                          </div>
+                        </div>
+                        <div>
+                          <input value={actionNote} onChange={e => setActionNote(e.target.value)} placeholder="Action note — type or select template above…" style={{ ...styles.input, width: '100%' }} />
+                          <div style={{ display: 'flex', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
+                            <button style={{ ...styles.smallBtn, fontSize: 10 }} onClick={() => { if (!actionNote.trim()) return; void updateReportStatus(selectedReport.id, 'Investigating', { assignedTo, note: actionNote }); setInteractionMessage(`Case ${selectedReport.id} set to Investigating.`); }}>Save as Investigating</button>
+                            <button style={{ ...styles.smallBtn, fontSize: 10 }} onClick={() => { if (!actionNote.trim()) return; void updateReportStatus(selectedReport.id, 'Action Taken', { assignedTo, note: actionNote }); setInteractionMessage(`Action logged for ${selectedReport.id}.`); }}>Log Action Taken</button>
+                            <button style={{ ...styles.smallBtnPrimary, fontSize: 10 }} onClick={() => { if (!actionNote.trim()) return; void updateReportStatus(selectedReport.id, 'Resolved', { assignedTo, note: actionNote }); setInteractionMessage(`Case ${selectedReport.id} resolved.`); }}>Mark Resolved</button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  {!mockLinkResponse && (
-                    <p style={{ ...styles.subtitle, fontSize: 11, marginTop: 8 }}>Click a resource above to preview its content and intended integration behavior.</p>
-                  )}
-                </div>
 
-                <div style={styles.responseCard}>
-                  <div style={{ fontWeight: 800, marginBottom: 6 }}>Response Composer</div>
-                  <p style={styles.subtitle}>Select a template, edit if needed, then submit directly to the active report.</p>
-                  <div style={styles.referRow}>
-                    <button style={styles.referBtn} onClick={() => setActionNote('Initial response sent. Team assigned and ETA communicated.')}>Template: Initial Response</button>
-                    <button style={styles.referBtn} onClick={() => setActionNote('Evidence request sent. Awaiting documents and photos.')}>Template: Evidence Request</button>
-                    <button style={styles.referBtn} onClick={() => setActionNote('Escalation notice sent to legal/compliance due to risk profile.')}>Template: Escalation Notice</button>
-                  </div>
-                  <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <input
-                      value={actionNote}
-                      onChange={(e) => setActionNote(e.target.value)}
-                      placeholder="Edit or type your action note here…"
-                      style={{ ...styles.input, width: '100%' }}
-                    />
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        style={{ ...styles.smallBtnPrimary, flex: 1 }}
-                        onClick={() => {
-                          if (!selectedReport || !actionNote.trim()) {
-                            setInteractionMessage('Add a note above and select a report first.');
-                            return;
-                          }
-                          void updateReportStatus(selectedReport.id, 'Action Taken', { note: actionNote });
-                          setInteractionMessage(`Response logged for ${selectedReport.id}: "${actionNote.slice(0, 60)}${actionNote.length > 60 ? '…' : ''}"`);
-                        }}
-                      >
-                        Submit Response to Report
-                      </button>
-                      <button
-                        style={styles.smallBtn}
-                        onClick={() => {
-                          if (!selectedReport || !actionNote.trim()) return;
-                          void updateReportStatus(selectedReport.id, 'Investigating', { assignedTo: assignedTo || 'Response Team', note: actionNote });
-                          setInteractionMessage(`Note saved for ${selectedReport.id} — status set to Investigating.`);
-                        }}
-                      >
-                        Save as Note
-                      </button>
-                      {actionNote && (
-                        <button style={styles.smallBtn} onClick={() => setActionNote('')}>Clear</button>
+                    {/* §8 Playbooks */}
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e293b' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={styles.officialSectionLabel}>§ 8 — Playbooks &amp; Resources</div>
+                        {mockLinkResponse && <button style={{ ...styles.smallBtn, fontSize: 9, padding: '2px 6px' }} onClick={() => setMockLinkResponse('')}>Clear</button>}
+                      </div>
+                      <div style={{ ...styles.referRow, marginTop: 8 }}>
+                        {categoryLinks(activeCategoryType).map((link) => (
+                          <button key={`${selectedEntity.type}-${link.label}`} style={styles.referBtn} onClick={() => openMockCategoryLink(link.label, link.action)}>📋 {link.label}</button>
+                        ))}
+                      </div>
+                      {mockLinkResponse && (
+                        <div style={{ marginTop: 8, border: '1px solid #22c55e44', borderRadius: 6, padding: '8px 10px', background: 'rgba(34,197,94,0.04)' }}>
+                          <div style={{ fontSize: 9, color: '#22c55e', fontWeight: 700, marginBottom: 4 }}>✓ LOADED</div>
+                          <pre style={{ ...styles.briefText, border: 'none', background: 'transparent', padding: 0, margin: 0, fontSize: 11 }}>{mockLinkResponse}</pre>
+                        </div>
                       )}
+                    </div>
+
+                    {/* Report action bar */}
+                    <div style={{ padding: '10px 16px', background: 'rgba(15,23,42,0.6)', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <button style={{ ...styles.smallBtn, fontSize: 10 }} onClick={() => {
+                        const content = [`DPAL NEXUS — OFFICIAL INCIDENT REPORT`, `Case Ref: ${caseRef}`, `Filed: ${fmtFull(baseDt)}`, ``, `TITLE: ${selectedReport.title}`, `Severity: ${selectedReport.severity} | Status: ${selectedReport.status}`, `Entity: ${selectedEntity.name} (${selectedEntity.type})`, `Location: ${selectedReport.location}`, `Channel: ${selectedReport.channel}`, `Case Officer: ${selectedReport.assignedTo || officers[0] || 'Unassigned'}`, `Reported By: ${reportedBy}`, ``, `DESCRIPTION:`, selectedReport.summary, ``, `LAST ACTION: ${selectedReport.lastActionNote || 'None'}`, ``, `EVIDENCE (${allEvidence.length} items):`, ...allEvidence.map(e => `  - ${e.label}: ${e.url}`), ``, `Generated by DPAL Nexus Accountability Platform`, `Reference: ${reportUrl}`].join('\n');
+                        void navigator.clipboard?.writeText(content);
+                        setInteractionMessage(`Report ${selectedReport.id} copied as official text.`);
+                        logAction(`Exported report ${selectedReport.id}`);
+                      }}>📋 Copy Report</button>
+                      <button style={{ ...styles.smallBtn, fontSize: 10 }} onClick={() => { void navigator.clipboard?.writeText(reportUrl); setInteractionMessage(`Shareable link copied: ${reportUrl}`); }}>🔗 Share Link</button>
+                      <button style={{ ...styles.smallBtn, fontSize: 10 }} onClick={() => window.print()}>🖨 Print</button>
+                      <button style={{ ...styles.smallBtn, fontSize: 10 }} onClick={() => void runAiForReport(selectedReport)}>🤖 AI Analysis</button>
+                      <button style={{ ...styles.smallBtnPrimary, fontSize: 10, marginLeft: 'auto' }} onClick={() => void updateReportStatus(selectedReport.id, 'Resolved', { note: 'Case resolved and officially closed via DPAL Nexus.' })}>✅ Resolve &amp; Close</button>
                     </div>
                   </div>
                 </div>
-
-                <div style={styles.actionButtons}>
-                  <button style={styles.smallBtn} onClick={() => openArea('dispatch')}>Go to Action Center</button>
-                  <button style={styles.smallBtn} onClick={() => openArea('audit')}>Open Audit Trail</button>
-                  <button style={styles.smallBtn} onClick={() => void runItemInteraction(selectedReport, 'request-evidence')}>Request Evidence</button>
-                  <button style={styles.smallBtn} onClick={() => void runItemInteraction(selectedReport, 'escalate-legal')}>Escalate Legal</button>
-                  <button style={styles.smallBtnPrimary} onClick={() => selectedReport && updateReportStatus(selectedReport.id, 'Resolved')}>Resolve Now</button>
-                </div>
-              </>
-            ) : (
-              <p style={styles.subtitle}>Select a report from the queue.</p>
+              );
+            })() : (
+              <div style={{ color: '#475569', fontSize: 13, textAlign: 'center', padding: '32px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                <div style={{ fontSize: 32 }}>📋</div>
+                <div style={{ fontWeight: 700, color: '#64748b' }}>No Report Selected</div>
+                <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}>Select a report from the queue to view the full official incident record.</div>
+                <button style={styles.smallBtnPrimary} onClick={() => openArea('reports')}>Open Reports Queue →</button>
+              </div>
             )}
 
-            <h4 style={{ marginTop: 16, marginBottom: 8 }}>Connected Modules</h4>
-            <div style={styles.channelWrap}>
-              {selectedEntity.modules.map((m) => {
-                const lower = m.toLowerCase();
-                const area: ActionArea = lower.includes('audit') || lower.includes('legal') || lower.includes('export')
-                  ? 'audit'
-                  : lower.includes('compliance') || lower.includes('risk') || lower.includes('board') || lower.includes('quality') || lower.includes('analytics') || lower.includes('advisor')
-                  ? 'analytics'
-                  : lower.includes('dispatch') || lower.includes('routing') || lower.includes('action') || lower.includes('command')
-                  ? 'dispatch'
-                  : 'reports';
-                return (
-                  <button
-                    key={m}
-                    style={{ ...styles.channelChip, cursor: 'pointer', background: 'rgba(15,23,42,0.85)' }}
-                    onClick={() => {
-                      openArea(area);
-                      setInteractionMessage(`Module: ${m} → ${ACTION_AREAS.find(a => a.key === area)?.label || area} opened.`);
-                    }}
-                  >
-                    {m}
-                  </button>
-                );
-              })}
-            </div>
+            {/* BELOW: stub for Submit Response block that was here — now in §7 above */}
           </div>
         </section>
 
