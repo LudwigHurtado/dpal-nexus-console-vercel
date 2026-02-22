@@ -322,7 +322,7 @@ const ENTITIES: Entity[] = [
   },
 ];
 
-const uniqueByType: Record<EntityType, { headline: string; color: string; channelFocus: string[]; layout: 'city' | 'hospital' | 'school' | 'bank' | 'default' }> = {
+const uniqueByType: Record<EntityType, { headline: string; color: string; channelFocus: string[]; layout: 'city' | 'hospital' | 'school' | 'bank' | 'utilities' | 'default' }> = {
   City: { headline: 'Urban Command Channel', color: '#38bdf8', channelFocus: ['Citizen WhatsApp Intake', 'Field Inspector App', 'Public Portal Reports'], layout: 'city' },
   'County Government': { headline: 'County Operations Channel', color: '#60a5fa', channelFocus: ['Constituent Portal', 'Cross-Agency Workflow', 'Emergency Readiness'], layout: 'default' },
   'Hospital Network': { headline: 'Clinical Safety Channel', color: '#22c55e', channelFocus: ['Ward Supervisor Hotline', 'Compliance Web Form', 'Clinical Team Mobile'], layout: 'hospital' },
@@ -332,7 +332,7 @@ const uniqueByType: Record<EntityType, { headline: string; color: string; channe
   'Police Department': { headline: 'Public Safety Response Channel', color: '#0284c7', channelFocus: ['911 Intake Sync', 'Patrol Dispatch', 'Evidence Workflow'], layout: 'default' },
   'Fire Department': { headline: 'Emergency Fire Ops Channel', color: '#f97316', channelFocus: ['Incident Command', 'Station Readiness', 'Response Timeline'], layout: 'default' },
   'Housing Authority': { headline: 'Tenant Protection Channel', color: '#ef4444', channelFocus: ['Tenant WhatsApp Intake', 'Inspector Field Workflow', 'Legal Case Pipeline'], layout: 'default' },
-  'Utilities Provider': { headline: 'Service Continuity Channel', color: '#84cc16', channelFocus: ['Outage Mobile Alerts', 'Regulator Portal', 'Crew Dispatch Terminal'], layout: 'default' },
+  'Utilities Provider': { headline: 'Service Continuity Channel', color: '#84cc16', channelFocus: ['Outage Mobile Alerts', 'Regulator Portal', 'Crew Dispatch Terminal'], layout: 'utilities' },
   'Retail Chain': { headline: 'Retail Risk Control Channel', color: '#f43f5e', channelFocus: ['Store Incident Intake', 'Loss Prevention Queue', 'Regional Ops Console'], layout: 'default' },
   'Logistics Company': { headline: 'Logistics Resilience Channel', color: '#0ea5e9', channelFocus: ['Hub Incident Feed', 'Driver Safety Alerts', 'Route Disruption Queue'], layout: 'default' },
   'Banking Group': { headline: 'Financial Operations Channel', color: '#22c55e', channelFocus: ['Branch Incident Intake', 'Fraud Risk Triage', 'Compliance Escalation'], layout: 'bank' },
@@ -1469,13 +1469,75 @@ export default function EnhancedNexusPrototype() {
 
   const renderEntityLayout = () => {
     if (profile.layout === 'city') {
+      const trustScore = 82;
+      const openCount = counts.total - counts.byStatus.Resolved;
+      const cityTiles = [
+        { label: 'Budget Oversight', action: 'Budget variance view opened for district comparison.' },
+        { label: 'Public Safety Review', action: 'Public safety escalation board loaded.' },
+        { label: 'Infrastructure Projects', action: 'Infrastructure backlog and SLA panel opened.' },
+        { label: 'City Policy Explorer', action: 'Policy explorer opened with city compliance filters.' },
+      ];
+
       return (
-        <div style={styles.uniqueLayoutCard}>
-          <h3 style={styles.cardTitle}>City Layout: Urban Ops Canvas</h3>
-          <div style={styles.uniqueGrid3}>
-            <MiniTile title="District Hotspots" value="17" subtitle="3 rising this week" />
-            <MiniTile title="Road Hazards" value="29" subtitle="8 urgent" />
-            <MiniTile title="Public Works ETA" value="2.1h" subtitle="median" />
+        <div style={styles.bankShell}>
+          <div style={styles.bankGridTop}>
+            <div style={styles.bankCard}>
+              <h3 style={styles.cardTitle}>Trust & Transparency Score</h3>
+              <div style={styles.bankGaugeValue}>{trustScore}<span style={{ fontSize: 22, color: '#94a3b8' }}>/100</span></div>
+              <div style={{ color: '#86efac', fontWeight: 700, marginTop: 6 }}>+4 last 30 days</div>
+              <div style={styles.bankScaleRow}>
+                <span style={{ color: '#ef4444' }}>Negative</span>
+                <span style={{ color: '#fbbf24' }}>Neutral</span>
+                <span style={{ color: '#22c55e' }}>Positive</span>
+              </div>
+            </div>
+
+            <div style={styles.bankCard}>
+              <h3 style={styles.cardTitle}>Overview of Key Reports</h3>
+              <div style={styles.bankListRow}><span>Code Violations</span><strong>{currentReports.filter((r) => /violation|illegal/i.test(r.title)).length}</strong></div>
+              <div style={styles.bankListRow}><span>Infrastructure Issues</span><strong>{currentReports.filter((r) => /road|drain|infrastructure|power/i.test(r.title)).length}</strong></div>
+              <div style={styles.bankListRow}><span>Service Complaints</span><strong>{currentReports.filter((r) => /complaint|issue/i.test(r.title)).length}</strong></div>
+              <div style={styles.bankListRow}><span>Total Open Cases</span><strong>{openCount}</strong></div>
+            </div>
+
+            <div style={styles.bankCard}>
+              <h3 style={styles.cardTitle}>Ongoing Issues</h3>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {currentReports.slice(0, 4).map((r) => (
+                  <div key={`city-${r.id}`} style={styles.bankCaseRow}>
+                    <span style={{ fontWeight: 700 }}>{r.id}</span>
+                    <span style={{ color: '#cbd5e1' }}>{r.title}</span>
+                    <span style={styles.bankStatusBadge}>{r.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={styles.bankGridBottom}>
+            <div style={styles.bankCardLarge}>
+              <h3 style={styles.cardTitle}>City Complaint Heat Map</h3>
+              <img src={activeCategoryImage} alt="City Heatmap" style={styles.bankMapImage} onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = categoryFallbackImage(activeCategoryType);
+              }} />
+            </div>
+            <div style={styles.bankCard}>
+              <h3 style={styles.cardTitle}>AI Advisor</h3>
+              <ul style={styles.bankInsightList}>
+                <li>Corruption/permit risk alerts prioritized by district and severity.</li>
+                <li>Infrastructure impact: escalate road hazards near schools first.</li>
+                <li>Suggested action: assign legal + public works on top unresolved items.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div style={styles.cityTileGrid}>
+            {cityTiles.map((tile) => (
+              <button key={`tile-${tile.label}`} style={styles.cityTileButton} onClick={() => openMockCategoryLink(tile.label, tile.action)}>
+                {tile.label}
+              </button>
+            ))}
           </div>
         </div>
       );
@@ -1501,6 +1563,65 @@ export default function EnhancedNexusPrototype() {
             <MiniTile title="Counselor Queue" value="23" subtitle="avg wait 5.4h" />
             <MiniTile title="Parent Outreach" value="96%" subtitle="within SLA" />
             <MiniTile title="High-Risk Campuses" value="3" subtitle="targeted intervention" />
+          </div>
+        </div>
+      );
+    }
+
+    if (profile.layout === 'utilities') {
+      const reliabilityScore = 89;
+      return (
+        <div style={styles.bankShell}>
+          <div style={styles.bankGridTop}>
+            <div style={styles.bankCard}>
+              <h3 style={styles.cardTitle}>Grid Reliability Score</h3>
+              <div style={styles.bankGaugeValue}>{reliabilityScore}<span style={{ fontSize: 22, color: '#94a3b8' }}>/100</span></div>
+              <div style={{ color: '#86efac', fontWeight: 700, marginTop: 6 }}>+2.1 this month</div>
+              <div style={styles.bankScaleRow}>
+                <span style={{ color: '#ef4444' }}>Critical</span>
+                <span style={{ color: '#fbbf24' }}>Warning</span>
+                <span style={{ color: '#22c55e' }}>Stable</span>
+              </div>
+            </div>
+
+            <div style={styles.bankCard}>
+              <h3 style={styles.cardTitle}>Outage & Service Summary</h3>
+              <div style={styles.bankListRow}><span>Active Outages</span><strong>{currentReports.filter((r) => r.status !== 'Resolved').length}</strong></div>
+              <div style={styles.bankListRow}><span>Customers Impacted</span><strong>14,102</strong></div>
+              <div style={styles.bankListRow}><span>Urgent Dispatches</span><strong>{currentReports.filter((r) => r.severity === 'High').length}</strong></div>
+              <div style={styles.bankListRow}><span>Regulatory Flags</span><strong>8</strong></div>
+            </div>
+
+            <div style={styles.bankCard}>
+              <h3 style={styles.cardTitle}>Field Crew Queue</h3>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {currentReports.slice(0, 4).map((r) => (
+                  <div key={`util-${r.id}`} style={styles.bankCaseRow}>
+                    <span style={{ fontWeight: 700 }}>{r.id}</span>
+                    <span style={{ color: '#cbd5e1' }}>{r.title}</span>
+                    <span style={styles.bankStatusBadge}>{r.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={styles.bankGridBottom}>
+            <div style={styles.bankCardLarge}>
+              <h3 style={styles.cardTitle}>Infrastructure Outage Heat Map</h3>
+              <img src={activeCategoryImage} alt="Utilities Heatmap" style={styles.bankMapImage} onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = categoryFallbackImage(activeCategoryType);
+              }} />
+            </div>
+            <div style={styles.bankCard}>
+              <h3 style={styles.cardTitle}>Operations Advisor</h3>
+              <ul style={styles.bankInsightList}>
+                <li>Dispatch crews first to high-density outage zones.</li>
+                <li>Trigger regulator packet draft for unresolved high-severity incidents.</li>
+                <li>Proposed action: pre-position night crews for SLA recovery.</li>
+              </ul>
+            </div>
           </div>
         </div>
       );
@@ -2292,6 +2413,8 @@ const styles: Record<string, React.CSSProperties> = {
   bankStatusBadge: { background: '#1d4ed8', border: '1px solid #2563eb', color: '#dbeafe', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700 },
   bankMapImage: { width: '100%', height: 240, objectFit: 'cover', borderRadius: 10, border: '1px solid #334155' },
   bankInsightList: { margin: 0, paddingLeft: 18, color: '#cbd5e1', lineHeight: 1.8, fontSize: 13 },
+  cityTileGrid: { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))' },
+  cityTileButton: { border: '1px solid #334155', background: 'linear-gradient(145deg,#0f172a,#111827)', color: '#e2e8f0', borderRadius: 10, padding: '12px 10px', fontWeight: 700, cursor: 'pointer' },
   miniTile: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: '#0f172a' },
   navCard: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: 'rgba(11,18,32,0.86)', display: 'flex', gap: 8, flexWrap: 'wrap' },
   railwayCard: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: 'rgba(11,18,32,0.86)', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' },
