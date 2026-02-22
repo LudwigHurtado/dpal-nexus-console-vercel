@@ -360,6 +360,42 @@ const CATEGORY_SHOWCASE: Array<{ type: EntityType; image: string; caption: strin
   { type: 'Airport Authority', image: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1400&q=85', caption: 'Terminal ops, safety cases and dispatch' },
 ];
 
+const COMPLETE_ENTITIES: Entity[] = (() => {
+  const byType = new Map<EntityType, Entity>();
+  for (const e of ENTITIES) if (!byType.has(e.type)) byType.set(e.type, e);
+
+  const generated: Entity[] = CATEGORY_SHOWCASE
+    .filter((c) => !byType.has(c.type))
+    .map((c, idx) => ({
+      id: `${c.type.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-demo`,
+      name: `${c.type} Demo Entity`,
+      type: c.type,
+      region: `DEMO-${idx + 1}`,
+      status: 'Pilot' as Status,
+      confidence: 88,
+      heroImage: c.image,
+      kpis: [
+        { label: 'Open Cases', value: String(120 + idx * 7), delta: '+2.1%' },
+        { label: 'Resolved (7d)', value: String(320 + idx * 11), delta: '+8.4%' },
+        { label: 'Avg Response', value: '2.4h', delta: '-0.2h' },
+        { label: 'SLA', value: '91%', delta: '+1.2%' },
+      ],
+      valueStats: [
+        { label: 'Risk Reduced', value: `${14 + idx}%` },
+        { label: 'Workflow Throughput', value: `${320 + idx * 12}/wk` },
+        { label: 'Compliance Lift', value: `+${9 + (idx % 4)}%` },
+      ],
+      modules: ['Risk Dashboard', 'Case Feed', 'AI Advisor', 'Ops Control'],
+      reports: [
+        { id: `${c.type.slice(0, 3).toUpperCase()}-9001`, channel: 'Web Portal', title: `${c.type} high-priority issue`, severity: 'High', status: 'New', location: 'Central Zone', eta: '2h', summary: `High-priority incident intake for ${c.type.toLowerCase()} operations.` },
+        { id: `${c.type.slice(0, 3).toUpperCase()}-9002`, channel: 'App', title: `${c.type} service complaint`, severity: 'Moderate', status: 'Investigating', location: 'North Sector', eta: '6h', summary: `Active investigation under ${c.type.toLowerCase()} workflow.` },
+        { id: `${c.type.slice(0, 3).toUpperCase()}-9003`, channel: 'WhatsApp', title: `${c.type} recurring risk pattern`, severity: 'Moderate', status: 'Action Taken', location: 'South Sector', eta: 'Completed', summary: `Mitigation action recorded for recurring ${c.type.toLowerCase()} pattern.` },
+      ],
+    }));
+
+  return [...ENTITIES, ...generated];
+})();
+
 const CATEGORY_INFO_NEEDS: Record<EntityType, Array<{ label: string; value: string; note: string }>> = {
   City: [
     { label: '311 Intake Volume', value: '12,420 / week', note: 'By district, hour, and issue type' },
@@ -672,12 +708,12 @@ const CATEGORY_PLAYBOOKS: Record<EntityType, CategoryPlaybook> = {  City: {
 };
 
 export default function EnhancedNexusPrototype() {
-  const [entities, setEntities] = useState<Entity[]>(ENTITIES);
+  const [entities, setEntities] = useState<Entity[]>(COMPLETE_ENTITIES);
   const [selectedType, setSelectedType] = useState<EntityType | 'All'>('All');
   const [selectedEntityId, setSelectedEntityId] = useState('nyc-city');
   const [view, setView] = useState<DashboardView>('Executive');
   const [activeArea, setActiveArea] = useState<ActionArea>('reports');
-  const [reportsByEntity, setReportsByEntity] = useState<Record<string, Report[]>>(Object.fromEntries(ENTITIES.map((e) => [e.id, e.reports])));
+  const [reportsByEntity, setReportsByEntity] = useState<Record<string, Report[]>>(Object.fromEntries(COMPLETE_ENTITIES.map((e) => [e.id, e.reports])));
   const [selectedReportId, setSelectedReportId] = useState<string>('NYC-1001');
   const [apiBaseInput, setApiBaseInput] = useState<string>(defaultApiBase);
   const apiBase = apiBaseInput.trim();
