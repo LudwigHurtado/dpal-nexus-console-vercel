@@ -83,6 +83,27 @@ const ACTION_AREAS: Array<{ key: ActionArea; label: string }> = [
   { key: 'audit', label: 'Audit Trail' },
 ];
 
+function getAreaForPortalTab(tab: string): ActionArea {
+  const t = tab.toLowerCase();
+  if (t.includes('admin')) return 'audit';
+  if (t.includes('compliance') || t.includes('esg') || t.includes('policy')) return 'analytics';
+  if (t.includes('operations') || t.includes('dispatch') || t.includes('field') || t.includes('station') || t.includes('route') || t.includes('hub') || t.includes('risk operations')) return 'dispatch';
+  return 'reports';
+}
+
+function getTabForArea(area: ActionArea, portalTabs: string[]): string {
+  switch (area) {
+    case 'audit':
+      return portalTabs.find((tab) => tab.toLowerCase().includes('admin')) || portalTabs[0] || 'Dashboard';
+    case 'analytics':
+      return portalTabs.find((tab) => /compliance|esg|policy/i.test(tab)) || portalTabs[0] || 'Dashboard';
+    case 'dispatch':
+      return portalTabs.find((tab) => /operations|dispatch|field|station|route|hub|risk operations/i.test(tab)) || portalTabs[0] || 'Dashboard';
+    default:
+      return portalTabs.find((tab) => /reports|feedback|complaints|violations|incident|case|store|service/i.test(tab)) || portalTabs[0] || 'Dashboard';
+  }
+}
+
 const defaultApiBase = (process.env.NEXT_PUBLIC_DPAL_API_BASE || '').trim();
 
 const ENTITIES: Entity[] = [
@@ -514,12 +535,12 @@ const CATEGORY_ICONS: Record<EntityType, string> = {
   'Airport Authority': '✈️',
 };
 
-const SETUP_CARDS = [
-  { id: 'budget', label: 'Budget Oversight', icon: '🔍' },
-  { id: 'safety', label: 'Public Safety Review', icon: '🛡️' },
-  { id: 'infra', label: 'Infrastructure Projects', icon: '🏗️' },
-  { id: 'policy', label: 'City Policy Explorer', icon: '📋' },
-] as const;
+const SETUP_CARDS: Array<{ id: string; label: string; icon: string; area: ActionArea }> = [
+  { id: 'budget', label: 'Budget Oversight', icon: '🔍', area: 'analytics' },
+  { id: 'safety', label: 'Public Safety Review', icon: '🛡️', area: 'reports' },
+  { id: 'infra', label: 'Infrastructure Projects', icon: '🏗️', area: 'dispatch' },
+  { id: 'policy', label: 'Policy Explorer', icon: '📋', area: 'analytics' },
+];
 
 // Using curated CATEGORY_SHOWCASE images first; fallback generator below keeps UI stable.
 
@@ -1204,6 +1225,10 @@ export default function EnhancedNexusPrototype() {
 
   const openArea = (area: ActionArea) => {
     setActiveArea(area);
+    const tabs = PORTAL_TABS_BY_TYPE[selectedEntity.type] || PORTAL_TABS_BY_TYPE.City;
+    setActivePortalTab(getTabForArea(area, tabs));
+    const areaLabel = ACTION_AREAS.find((a) => a.key === area)?.label || area;
+    setInteractionMessage(`${areaLabel} — ${selectedEntity.name}. View updated.`);
     logAction(`Switched section to ${area}`);
   };
 
@@ -1653,7 +1678,10 @@ export default function EnhancedNexusPrototype() {
 
         <section style={styles.portalShell}>
           <div style={styles.portalTopBar}>
-            <div style={styles.portalBrand}>DPAL  |  {selectedEntity.type} Accountability Portal</div>
+            <div>
+              <div style={styles.portalBrand}>DPAL  |  {selectedEntity.type} Accountability Portal</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{selectedEntity.name} · {selectedEntity.region}</div>
+            </div>
             <div style={styles.portalRisk}>Risk Level <span style={{ color: profile.color, fontWeight: 800 }}>{selectedEntity.confidence >= 90 ? 'LOW' : selectedEntity.confidence >= 80 ? 'MODERATE' : 'ELEVATED'}</span></div>
           </div>
           <div style={styles.portalTabs}>
@@ -1666,7 +1694,8 @@ export default function EnhancedNexusPrototype() {
                 }}
                 onClick={() => {
                   setActivePortalTab(tab);
-                  setInteractionMessage(`Opened ${tab} tab for ${selectedEntity.type}.`);
+                  openArea(getAreaForPortalTab(tab));
+                  setInteractionMessage(`${tab} — ${selectedEntity.name} (${selectedEntity.type}). Content updated.`);
                 }}
               >
                 <span style={{ fontSize: 16 }} aria-hidden>{portalTabIcon(tab)}</span>
@@ -1916,6 +1945,7 @@ export default function EnhancedNexusPrototype() {
         {interactionMessage && (
           <section style={styles.interactionBanner}>
             <strong>Interaction:</strong> {interactionMessage}
+            <button type="button" aria-label="Dismiss" onClick={() => setInteractionMessage('')} style={styles.interactionDismiss}>×</button>
           </section>
         )}
 
@@ -2303,8 +2333,10 @@ export default function EnhancedNexusPrototype() {
                 className="showcase-card"
                 style={styles.setupCard}
                 onClick={() => {
-                  setActivePortalTab('Dashboard');
-                  setInteractionMessage(`Opened ${setup.label}.`);
+                  openArea(setup.area);
+                  const tabs = PORTAL_TABS_BY_TYPE[selectedEntity.type] || PORTAL_TABS_BY_TYPE.City;
+                  setActivePortalTab(getTabForArea(setup.area, tabs));
+                  setInteractionMessage(`${setup.label} — ${selectedEntity.name} (${selectedEntity.type}). View updated.`);
                 }}
               >
                 <div style={styles.showcaseIconWrap}>
@@ -2440,7 +2472,8 @@ const styles: Record<string, React.CSSProperties> = {
   railwayCard: { border: '1px solid #334155', borderRadius: 12, padding: 12, background: 'rgba(11,18,32,0.86)', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' },
   endpointGrid: { display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', width: '100%' },
   endpointItem: { border: '1px solid #334155', borderRadius: 8, padding: '6px 8px', display: 'flex', justifyContent: 'space-between', background: '#0f172a', fontSize: 12, color: '#cbd5e1' },
-  interactionBanner: { border: '1px solid #2563eb', borderRadius: 10, padding: '8px 10px', background: 'rgba(37,99,235,0.12)', color: '#dbeafe', fontSize: 13 },
+  interactionBanner: { border: '1px solid #2563eb', borderRadius: 10, padding: '8px 12px', background: 'rgba(37,99,235,0.12)', color: '#dbeafe', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  interactionDismiss: { background: 'transparent', border: 'none', color: '#93c5fd', fontSize: 18, cursor: 'pointer', padding: '0 4px', lineHeight: 1 },
   voicePanel: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: 'rgba(11,18,32,0.86)', display: 'grid', gap: 8 },
   sectionBtn: { border: '1px solid #334155', background: '#0f172a', color: '#cbd5e1', borderRadius: 9, padding: '8px 10px', cursor: 'pointer', fontWeight: 700 },
   sectionBtnActive: { borderColor: '#2563eb', background: '#1d4ed8', color: '#fff' },
