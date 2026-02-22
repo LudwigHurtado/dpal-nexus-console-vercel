@@ -807,6 +807,10 @@ export default function EnhancedNexusPrototype() {
   const [entityEditorStatus, setEntityEditorStatus] = useState<Status>('Active');
   const [activePortalTab, setActivePortalTab] = useState<string>('Dashboard');
   const [activeTool, setActiveTool] = useState<string>('');
+  const [userEvidenceByReport, setUserEvidenceByReport] = useState<Record<string, Array<{id: string; type: string; label: string; url: string; addedAt: string}>>>({});
+  const [newEvidenceLabel, setNewEvidenceLabel] = useState('');
+  const [newEvidenceUrl, setNewEvidenceUrl] = useState('');
+  const [newEvidenceType, setNewEvidenceType] = useState<'photo' | 'document' | 'data' | 'video'>('photo');
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(entities.map((e) => e.type)))] as const, [entities]);
   const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
@@ -962,8 +966,10 @@ export default function EnhancedNexusPrototype() {
     try {
       const rawReports = localStorage.getItem('nexus_reports_state_v1');
       const rawAudit = localStorage.getItem('nexus_audit_state_v1');
+      const rawEvidence = localStorage.getItem('nexus_evidence_state_v1');
       if (rawReports) setReportsByEntity(JSON.parse(rawReports));
       if (rawAudit) setAuditEntries(JSON.parse(rawAudit));
+      if (rawEvidence) setUserEvidenceByReport(JSON.parse(rawEvidence));
     } catch {
       // ignore hydrate errors
     }
@@ -973,10 +979,11 @@ export default function EnhancedNexusPrototype() {
     try {
       localStorage.setItem('nexus_reports_state_v1', JSON.stringify(reportsByEntity));
       localStorage.setItem('nexus_audit_state_v1', JSON.stringify(auditEntries));
+      localStorage.setItem('nexus_evidence_state_v1', JSON.stringify(userEvidenceByReport));
     } catch {
       // ignore persistence errors
     }
-  }, [reportsByEntity, auditEntries]);
+  }, [reportsByEntity, auditEntries, userEvidenceByReport]);
 
   useEffect(() => {
     const currentType: EntityType = selectedType === 'All' ? selectedEntity.type : selectedType;
@@ -1362,26 +1369,82 @@ export default function EnhancedNexusPrototype() {
       City: [
         { label: 'City Department Routing', action: 'Routing matrix loaded for Public Works / Safety / Legal.' },
         { label: 'Citizen Alert Draft', action: 'Public advisory draft prepared for city communications.' },
+        { label: 'District Hotspot Summary', action: 'District-level reporting summary generated for active hotspots.' },
+      ],
+      'County Government': [
+        { label: 'Inter-Agency Dispatch Map', action: 'County inter-agency handoff map loaded for report routing.' },
+        { label: 'Storm Response Checklist', action: 'Storm preparedness checklist opened with SLA checkpoints.' },
+        { label: 'Constituent Escalation Digest', action: 'Escalation digest generated for unresolved county issues.' },
       ],
       'Hospital Network': [
         { label: 'Clinical Incident SOP', action: 'Clinical safety SOP opened for rapid response workflow.' },
         { label: 'Regulatory Packet Builder', action: 'Mock regulatory packet assembled for review.' },
+        { label: 'Patient Safety Escalation Log', action: 'Patient safety escalation log prepared for compliance reporting.' },
       ],
       'School District': [
         { label: 'Campus Escalation Protocol', action: 'Campus-level escalation path displayed for admin/counselor.' },
         { label: 'Parent Communication Template', action: 'Parent-safe communication draft generated.' },
+        { label: 'Campus Risk Digest', action: 'Campus risk digest exported for district reporting.' },
       ],
-      'Banking Group': [
-        { label: 'Consumer Harm Scoring Guide', action: 'Harm scoring rules loaded for fraud/misconduct complaints.' },
-        { label: 'Restitution Workflow', action: 'Restitution tracking workflow preview opened.' },
+      University: [
+        { label: 'Academic Integrity Workflow', action: 'Academic integrity workflow opened with referral path.' },
+        { label: 'Campus Governance Checklist', action: 'Governance checklist generated for oversight reporting.' },
+        { label: 'Student Risk Summary', action: 'Student incident summary prepared for leadership review.' },
+      ],
+      'Transit Agency': [
+        { label: 'Route Disruption Playbook', action: 'Route disruption playbook opened for rapid mitigation.' },
+        { label: 'Station Incident Matrix', action: 'Station incident matrix loaded by severity and SLA.' },
+        { label: 'Service Recovery Brief', action: 'Service recovery brief generated for operations reporting.' },
+      ],
+      'Police Department': [
+        { label: 'Priority Dispatch Matrix', action: 'Priority dispatch matrix opened with escalation routing.' },
+        { label: 'Evidence Chain Checklist', action: 'Evidence chain checklist generated for case integrity.' },
+        { label: 'Precinct Risk Brief', action: 'Precinct risk brief generated for command review.' },
+      ],
+      'Fire Department': [
+        { label: 'Emergency Dispatch SOP', action: 'Emergency dispatch SOP loaded for active incidents.' },
+        { label: 'Hydrant Readiness Log', action: 'Hydrant readiness log prepared for compliance checks.' },
+        { label: 'Post-Incident Report Pack', action: 'Post-incident report pack generated for audit.' },
       ],
       'Housing Authority': [
         { label: 'Tenant Protection Workflow', action: 'Tenant safety and inspection workflow preview loaded.' },
         { label: 'Legal Escalation Matrix', action: 'Legal escalation conditions and SLA shown.' },
+        { label: 'Inspection Backlog Report', action: 'Inspection backlog report generated for housing operations.' },
       ],
       'Utilities Provider': [
         { label: 'Outage Risk SOP', action: 'Outage response SOP opened for operations and field teams.' },
         { label: 'Regulator Notification Template', action: 'Regulatory notification draft generated.' },
+        { label: 'Grid Reliability Brief', action: 'Grid reliability brief generated for executive reporting.' },
+      ],
+      'Retail Chain': [
+        { label: 'Store Incident Routing', action: 'Store incident routing matrix opened for rapid triage.' },
+        { label: 'Loss Prevention Summary', action: 'Loss prevention summary generated for regional review.' },
+        { label: 'Safety Compliance Snapshot', action: 'Store safety compliance snapshot exported.' },
+      ],
+      'Logistics Company': [
+        { label: 'Hub Disruption Workflow', action: 'Hub disruption workflow opened with response owners.' },
+        { label: 'Driver Safety Digest', action: 'Driver safety digest generated for operations leadership.' },
+        { label: 'Claims Risk Report', action: 'Claims risk report prepared for escalation review.' },
+      ],
+      'Banking Group': [
+        { label: 'Consumer Harm Scoring Guide', action: 'Harm scoring rules loaded for fraud/misconduct complaints.' },
+        { label: 'Restitution Workflow', action: 'Restitution tracking workflow preview opened.' },
+        { label: 'Regulatory Exposure Brief', action: 'Regulatory exposure brief generated for compliance team.' },
+      ],
+      'Insurance Provider': [
+        { label: 'Claim Integrity Workflow', action: 'Claim integrity workflow opened with fraud checkpoints.' },
+        { label: 'Fraud Signal Review', action: 'Fraud signal review panel loaded for triage.' },
+        { label: 'Liability Exposure Brief', action: 'Liability exposure brief generated for legal review.' },
+      ],
+      'Telecom Provider': [
+        { label: 'Network Outage Triage', action: 'Network outage triage workflow opened for NOC dispatch.' },
+        { label: 'SLA Breach Watch', action: 'SLA breach watchlist generated for enterprise links.' },
+        { label: 'Service Degradation Report', action: 'Service degradation report prepared for operations.' },
+      ],
+      'Airport Authority': [
+        { label: 'Terminal Incident Matrix', action: 'Terminal incident matrix opened with zone ownership.' },
+        { label: 'Ground Ops Safety Checklist', action: 'Ground ops safety checklist generated for shift leads.' },
+        { label: 'Compliance Audit Packet', action: 'Compliance audit packet prepared for aviation oversight.' },
       ],
     };
 
@@ -1392,6 +1455,18 @@ export default function EnhancedNexusPrototype() {
     const msg = `Mock Link: ${label}\n${action}\n(Ready for real route integration)`;
     setMockLinkResponse(msg);
     setInteractionMessage(`Opened ${label}`);
+
+    const lower = `${label} ${action}`.toLowerCase();
+    if (lower.includes('checklist') || lower.includes('audit') || lower.includes('compliance')) {
+      setActiveArea('audit');
+    } else if (lower.includes('summary') || lower.includes('brief') || lower.includes('report')) {
+      setActiveArea('analytics');
+      setExecutiveBrief(`Category Brief - ${activeCategoryType}\n${label}\n${action}\nQueue: ${counts.total} reports, ${counts.byStatus.New} new, ${counts.byStatus.Investigating} investigating.`);
+    } else {
+      setActiveArea('dispatch');
+      setActionNote(`${label}: ${action}`);
+    }
+
     logAction(`Opened category link: ${label}`);
   };
 
@@ -3245,6 +3320,7 @@ const styles: Record<string, React.CSSProperties> = {
   playbookSteps: { display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' },
   agentConsole: { border: '1px dashed #334155', borderRadius: 10, marginTop: 10, padding: 10, background: 'rgba(2,6,23,0.45)' },
   agentLogList: { margin: '8px 0 0 16px', color: '#cbd5e1', fontSize: 12, lineHeight: 1.6 },
+  officialSectionLabel: { fontSize: 10, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase' as const, color: '#475569', paddingBottom: 2, borderBottom: '1px solid #1e293b' },
   playStepItem: { border: '1px solid #334155', borderRadius: 10, background: '#0f172a', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8, color: '#cbd5e1' },
   playStepIndex: { width: 20, height: 20, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#1d4ed8', color: '#fff', fontSize: 11, fontWeight: 700 },
   uniqueLayoutCard: { border: '1px solid #334155', borderRadius: 14, padding: 14, background: 'rgba(11,18,32,0.86)' },
