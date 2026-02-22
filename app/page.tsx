@@ -796,6 +796,7 @@ export default function EnhancedNexusPrototype() {
   const [entityEditorRegion, setEntityEditorRegion] = useState('');
   const [entityEditorStatus, setEntityEditorStatus] = useState<Status>('Active');
   const [activePortalTab, setActivePortalTab] = useState<string>('Dashboard');
+  const [activeTool, setActiveTool] = useState<string>('');
 
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(entities.map((e) => e.type)))] as const, [entities]);
   const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
@@ -833,6 +834,7 @@ export default function EnhancedNexusPrototype() {
 
   useEffect(() => {
     setActivePortalTab('Dashboard');
+    setActiveTool('');
   }, [selectedEntity.type]);
 
   const logAgent = (text: string) => {
@@ -1230,6 +1232,82 @@ export default function EnhancedNexusPrototype() {
     const areaLabel = ACTION_AREAS.find((a) => a.key === area)?.label || area;
     setInteractionMessage(`${areaLabel} — ${selectedEntity.name}. View updated.`);
     logAction(`Switched section to ${area}`);
+  };
+
+  const openTool = (toolName: string) => {
+    const lower = toolName.toLowerCase();
+    const area: ActionArea =
+      lower.includes('legal') || lower.includes('audit') || lower.includes('trail') ? 'audit'
+      : lower.includes('analytics') || lower.includes('radar') || lower.includes('packet') || lower.includes('scoring') || lower.includes('board') && lower.includes('risk') ? 'analytics'
+      : lower.includes('queue') || lower.includes('intake') || lower.includes('report') || lower.includes('feed') ? 'reports'
+      : 'dispatch';
+
+    const noteMap: Partial<Record<string, string>> = {
+      'Tenant Protection Workflow': 'Tenant protection protocol initiated. Documenting hazard conditions. Emergency inspection required within 24h.',
+      'Inspection Assignment': 'Inspection assigned and scheduled. Inspector dispatched with access confirmation from building manager.',
+      'Legal Escalation Matrix': 'Legal escalation initiated. Case flagged for potential code violation and tenant rights review. Legal hold in place.',
+      'Clinical Risk Triage': 'Clinical risk triage initiated. Protocol review underway. Safety team and ward supervisor notified.',
+      'Compliance Packet Builder': 'Compliance packet assembled. Regulatory documentation package ready for submission.',
+      'Patient Safety Escalation': 'Patient safety incident escalated to Patient Safety Board. Root cause analysis initiated.',
+      'Citizen Intake Routing': 'Citizen complaint routed through intake queue. Department assignment completed.',
+      'Public Works Dispatch': 'Public works crew dispatched. ETA confirmed. Task scope logged in system.',
+      'Traffic Risk Radar': 'Traffic risk analysis initiated. Corridor signals and routing data under review.',
+      'Campus Escalation Protocol': 'Campus escalation protocol activated. Principal, counselor, and district safety office notified.',
+      'Counselor Routing': 'Counselor routing initiated. Case assigned based on severity score and availability.',
+      'Parent Communication Composer': 'Parent communication drafted using safe-language template. Awaiting supervisor review before send.',
+      'Priority Dispatch Triage': 'Priority dispatch initiated. Unit assigned based on case severity tier and closest available resources.',
+      'Evidence Chain Tracker': 'Evidence chain tracking opened. Chain-of-custody documentation started with timestamp.',
+      'Precinct Risk Board': 'Precinct risk board updated with latest case data and patrol zone risk index.',
+      'Emergency Dispatch Board': 'Emergency dispatch logged. Station response initiated. Response timer started.',
+      'Hydrant Readiness Checks': 'Hydrant readiness verification initiated. Field crew assigned to inspection route.',
+      'Post-Incident Workflow': 'Post-incident documentation workflow opened. After-action report template loaded.',
+      'Outage Response SOP': 'Outage response SOP activated. Field crew dispatched to primary restoration point.',
+      'Field Crew Dispatch': 'Field crew assigned and dispatched. ETA and task zone logged.',
+      'Regulator Notification Template': 'Regulator notification drafted. Incident data and response timeline included.',
+      'Inter-Agency Handoff': 'Inter-agency handoff initiated. Receiving agency notified with case summary and documentation.',
+      'Fraud Escalation Queue': 'Fraud escalation case opened. Compliance officer and branch manager notified.',
+      'Consumer Harm Scoring': 'Consumer harm score calculated. Risk tier assigned for response prioritization.',
+      'Restitution Workflow': 'Restitution tracking workflow initiated. Calculation and approval pipeline started.',
+      'Claim Integrity Scoring': 'Claim integrity score generated. Risk flags identified and assigned to investigation team.',
+      'Fraud Signal Review': 'Fraud signal review initiated. Pattern analysis running across related claims.',
+      'Legal Exposure Tracker': 'Legal exposure tracker opened. Liability surface documented and counsel notified.',
+      'Network Outage Triage': 'NOC triage initiated. Affected towers and service zones identified on outage map.',
+      'Tower Dispatch Board': 'Tower dispatch board updated. Field tech assigned to affected tower location.',
+      'SLA Risk Watch': 'SLA risk watch activated. Aging cases flagged for immediate action to avoid breach.',
+      'Terminal Incident Queue': 'Terminal incident logged. Terminal ops team and security management notified.',
+      'Ground Ops Safety': 'Ground ops safety review initiated. Incident area secured. Safety officer assigned.',
+      'Aviation Compliance Workflow': 'Aviation compliance workflow opened. Incident documentation and regulator notification drafted.',
+      'Hub Disruption Board': 'Hub disruption logged. Route mitigation plan initiated. Driver advisory sent.',
+      'Driver Safety Queue': 'Driver safety case opened. Fleet manager and HR notified. Incident report filed.',
+      'Claims Triage': 'Claims triage initiated. Initial scoring complete. Assigned to claims supervisor.',
+      'Store Risk Feed': 'Store risk case opened. Regional loss prevention team alerted. Manager notified.',
+      'Loss Prevention Queue': 'Loss prevention case created. Evidence preservation request sent to store.',
+      'Regional Incident Dispatch': 'Regional dispatch initiated. On-site team en route with case brief.',
+      'Academic Integrity Workflow': 'Academic integrity case opened. Student Affairs and faculty committee notified.',
+      'Governance Review Queue': 'Governance review queue entry created. Committee members notified of pending case.',
+      'Campus Security Feed': 'Campus security alert logged. Patrol routed to incident area.',
+      'Route Disruption Console': 'Route disruption logged. Alternative routing activated. Passenger alerts sent.',
+      'Station Safety Queue': 'Station safety case opened. Station supervisor and maintenance team notified.',
+      'Recovery SLA Tracker': 'SLA recovery tracker activated. Time-to-restore target set and monitored.',
+      'District Heatmap': 'District heatmap view opened. Incident clusters identified for priority response.',
+      'Inspection Unit': 'Inspection unit assignment initiated. Unit dispatched to location.',
+    };
+
+    const fallbackNote = `${toolName} initiated for ${selectedEntity.name}. Action required within SLA. Document all steps taken.`;
+    const note = noteMap[toolName] || fallbackNote;
+
+    const referralBase = referralTargets(currentReports[0] || {
+      id: 'TOOL-001', title: toolName, severity: 'Moderate', status: 'New',
+      channel: 'App', location: selectedEntity.region, eta: 'TBD', summary: '',
+    } as Report);
+    const defaultAssignee = referralBase[0] || 'Operations Team';
+
+    openArea(area);
+    setAssignedTo(defaultAssignee);
+    setActionNote(note);
+    setActiveTool(toolName);
+    setInteractionMessage(`Tool: ${toolName} — Action Center pre-filled. Review and submit below.`);
+    logAction(`Opened tool panel: ${toolName}`);
   };
 
   const quickRefer = async (report: Report, target: string) => {
@@ -1905,12 +1983,227 @@ export default function EnhancedNexusPrototype() {
 
         <div style={styles.cityTileGrid}>
           {tileActions.map((tile) => (
-            <button key={`${activeCategoryType}-${tile.label}`} style={{ ...styles.cityTileButton, borderColor: palette.primary }} onClick={() => openMockCategoryLink(tile.label, tile.action)}>
+            <button
+              key={`${activeCategoryType}-${tile.label}`}
+              style={{
+                ...styles.cityTileButton,
+                borderColor: activeTool === tile.label ? palette.primary : '#334155',
+                background: activeTool === tile.label ? `linear-gradient(145deg,${palette.primary}22,${palette.primary}11)` : 'linear-gradient(145deg,#0f172a,#111827)',
+                color: activeTool === tile.label ? '#fff' : '#e2e8f0',
+                boxShadow: activeTool === tile.label ? `0 0 0 1px ${palette.primary}55 inset` : 'none',
+              }}
+              onClick={() => {
+                if (activeTool === tile.label) {
+                  setActiveTool('');
+                } else {
+                  openTool(tile.label);
+                }
+              }}
+            >
               {tile.label}
+              {activeTool === tile.label && <span style={{ marginLeft: 6, fontSize: 10, opacity: 0.7 }}>▼ open</span>}
             </button>
           ))}
         </div>
       </div>
+    );
+  };
+
+  const renderToolPanel = () => {
+    if (!activeTool) return null;
+    const lower = activeTool.toLowerCase();
+    const targetReport = selectedReport || currentReports[0];
+    const typeReferrals = referralTargets(targetReport || { id: 'T', title: activeTool, severity: 'Moderate', status: 'New', channel: 'App', location: selectedEntity.region, eta: 'TBD', summary: '' } as Report);
+
+    const isLegal = lower.includes('legal') || lower.includes('restitution') || lower.includes('exposure') || lower.includes('compliance packet') || lower.includes('aviation compliance') || lower.includes('governance');
+    const isInspection = lower.includes('inspection') || lower.includes('hydrant') || lower.includes('readiness');
+    const isSafety = lower.includes('protection') || lower.includes('safety') || lower.includes('patient') || lower.includes('campus') || lower.includes('welfare');
+    const isDispatch = lower.includes('dispatch') || lower.includes('routing') || lower.includes('crew') || lower.includes('route') || lower.includes('station') || lower.includes('hub') || lower.includes('terminal') || lower.includes('ground ops');
+    const isFraud = lower.includes('fraud') || lower.includes('harm') || lower.includes('integrity') || lower.includes('claim') || lower.includes('loss prevention');
+    const isAnalytics = lower.includes('radar') || lower.includes('heatmap') || lower.includes('analytics') || lower.includes('scoring') || lower.includes('sla');
+
+    type ToolAction = { label: string; status: ReportStatus; note: string; assignee: string };
+    const toolActions: ToolAction[] = isLegal
+      ? [
+          { label: 'Issue Legal Notice', status: 'Investigating', note: 'Legal notice issued. Compliance requirements communicated to responsible party.', assignee: typeReferrals[2] || 'Legal Affairs' },
+          { label: 'Open Case File', status: 'Action Taken', note: 'Legal case file opened. Documentation package and evidence log assembled.', assignee: typeReferrals[2] || 'Legal Affairs' },
+          { label: 'Close with Resolution', status: 'Resolved', note: 'Legal matter resolved. Settlement or compliance outcome documented.', assignee: typeReferrals[2] || 'Legal Affairs' },
+        ]
+      : isInspection
+      ? [
+          { label: 'Dispatch Inspector', status: 'Investigating', note: 'Inspector dispatched to location. Access confirmed with site contact.', assignee: typeReferrals[0] || 'Inspection Unit' },
+          { label: 'Log Findings', status: 'Action Taken', note: 'Inspection completed. Findings documented, photos uploaded, and violations recorded.', assignee: typeReferrals[0] || 'Inspection Unit' },
+          { label: 'Issue Pass / Clear Site', status: 'Resolved', note: 'Inspection passed. Compliance certificate issued. Case closed.', assignee: typeReferrals[0] || 'Inspection Unit' },
+        ]
+      : isFraud
+      ? [
+          { label: 'Flag for Investigation', status: 'Investigating', note: 'Fraud signal flagged. Compliance officer and risk analyst assigned.', assignee: typeReferrals[1] || 'Fraud Unit' },
+          { label: 'Log Enforcement Action', status: 'Action Taken', note: 'Enforcement action documented. Suspension or restriction applied pending review.', assignee: typeReferrals[1] || 'Fraud Unit' },
+          { label: 'Close with Outcome', status: 'Resolved', note: 'Fraud/integrity case closed. Restitution or clearance outcome recorded.', assignee: typeReferrals[1] || 'Fraud Unit' },
+        ]
+      : isDispatch
+      ? [
+          { label: 'Dispatch Team', status: 'Investigating', note: 'Team dispatched to location. Estimated arrival and task scope logged.', assignee: typeReferrals[0] || 'Field Team' },
+          { label: 'Log On-Site Action', status: 'Action Taken', note: 'On-site action completed. Progress and findings documented.', assignee: typeReferrals[0] || 'Field Team' },
+          { label: 'Confirm Restoration', status: 'Resolved', note: 'Restoration or resolution confirmed. Site cleared and case closed.', assignee: typeReferrals[0] || 'Field Team' },
+        ]
+      : isSafety
+      ? [
+          { label: 'Activate Safety Protocol', status: 'Investigating', note: 'Safety protocol activated. All relevant contacts notified. Documentation started.', assignee: typeReferrals[0] || 'Safety Team' },
+          { label: 'Log Protective Action', status: 'Action Taken', note: 'Protective measures applied. Hazard contained or individual safeguarded.', assignee: typeReferrals[0] || 'Safety Team' },
+          { label: 'Close Safety Case', status: 'Resolved', note: 'Safety verification complete. Follow-up review scheduled. Case closed.', assignee: typeReferrals[0] || 'Safety Team' },
+        ]
+      : isAnalytics
+      ? [
+          { label: 'Run Risk Analysis', status: 'Investigating', note: 'Risk analysis initiated. Data aggregation and pattern detection running.', assignee: typeReferrals[1] || 'Analytics Team' },
+          { label: 'Apply Recommended Action', status: 'Action Taken', note: 'Recommended mitigation action applied based on analysis output.', assignee: typeReferrals[1] || 'Analytics Team' },
+          { label: 'Archive Analysis Report', status: 'Resolved', note: 'Analysis report archived. Findings shared with leadership for review.', assignee: typeReferrals[1] || 'Analytics Team' },
+        ]
+      : [
+          { label: 'Assign & Start', status: 'Investigating', note: `${activeTool} initiated. Team assigned and tracking started.`, assignee: typeReferrals[0] || 'Operations Team' },
+          { label: 'Log Action', status: 'Action Taken', note: `Action logged via ${activeTool}. Progress documented.`, assignee: typeReferrals[0] || 'Operations Team' },
+          { label: 'Mark Complete', status: 'Resolved', note: `${activeTool} completed. Case closed with documented outcome.`, assignee: typeReferrals[0] || 'Operations Team' },
+        ];
+
+    return (
+      <section style={{ border: `2px solid ${profile.color}44`, borderRadius: 14, padding: 18, background: 'rgba(9,16,32,0.97)', display: 'grid', gap: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: profile.color }} />
+              <span style={{ fontSize: 11, color: profile.color, fontWeight: 700, textTransform: 'uppercase' }}>{activeCategoryType} Tool</span>
+            </div>
+            <div style={{ fontWeight: 800, fontSize: 18, color: '#f1f5f9' }}>{activeTool}</div>
+            <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 4 }}>{selectedEntity.name} · {selectedEntity.region}</div>
+          </div>
+          <button style={{ ...styles.smallBtn, padding: '6px 12px' }} onClick={() => setActiveTool('')}>✕ Close</button>
+        </div>
+
+        {targetReport ? (
+          <div style={{ border: `1px solid ${profile.color}33`, borderRadius: 10, padding: '12px 14px', background: 'rgba(15,23,42,0.8)', display: 'grid', gap: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#93c5fd', fontWeight: 700, marginBottom: 4 }}>Active Case</div>
+                <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: 14 }}>{targetReport.id} — {targetReport.title}</div>
+                <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>
+                  {targetReport.location} · <span style={{ color: targetReport.severity === 'High' ? '#ef4444' : targetReport.severity === 'Moderate' ? '#f97316' : '#22c55e', fontWeight: 700 }}>{targetReport.severity}</span> · {targetReport.status}
+                  {targetReport.assignedTo && <span> · Assigned: {targetReport.assignedTo}</span>}
+                </div>
+              </div>
+              <button style={styles.referBtn} onClick={() => { setSelectedReportId(targetReport.id); openArea('reports'); }}>
+                View Full Case →
+              </button>
+            </div>
+            {targetReport.summary && (
+              <div style={{ fontSize: 12, color: '#cbd5e1', borderTop: '1px solid #1e293b', paddingTop: 8 }}>{targetReport.summary}</div>
+            )}
+          </div>
+        ) : (
+          <div style={{ color: '#f97316', fontSize: 13, padding: '10px 14px', background: 'rgba(249,115,22,0.08)', borderRadius: 10, border: '1px solid rgba(249,115,22,0.25)' }}>
+            ⚠ No report selected. Go to <button style={{ background: 'none', border: 'none', color: '#93c5fd', cursor: 'pointer', fontWeight: 700, padding: 0 }} onClick={() => openArea('reports')}>Reports Queue →</button> and select a case to use this tool.
+          </div>
+        )}
+
+        <div>
+          <div style={{ fontSize: 11, color: '#93c5fd', fontWeight: 700, marginBottom: 10, textTransform: 'uppercase' }}>Quick Actions</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+            {toolActions.map((action) => (
+              <button
+                key={action.label}
+                style={{
+                  border: `1px solid ${profile.color}55`,
+                  background: `linear-gradient(145deg, rgba(15,23,42,0.9), rgba(8,12,20,0.85))`,
+                  color: '#f1f5f9',
+                  borderRadius: 10,
+                  padding: '12px 14px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                }}
+                onClick={() => {
+                  if (!targetReport) { setInteractionMessage('Select a report from the queue first.'); return; }
+                  void updateReportStatus(targetReport.id, action.status, { assignedTo: action.assignee, note: action.note });
+                  setInteractionMessage(`${action.label} — ${targetReport.id} → ${action.status}.`);
+                }}
+              >
+                <span style={{ fontWeight: 700, fontSize: 13 }}>{action.label}</span>
+                <span style={{ fontSize: 10, color: '#94a3b8' }}>→ Assigns: {action.assignee}</span>
+                <span style={{ fontSize: 10, color: action.status === 'Resolved' ? '#22c55e' : action.status === 'Action Taken' ? '#f97316' : '#60a5fa', fontWeight: 600 }}>{action.status}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ border: '1px dashed #334155', borderRadius: 10, padding: 14, background: 'rgba(15,23,42,0.5)' }}>
+          <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 13 }}>Custom Action</div>
+          <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+            <input
+              value={assignedTo}
+              onChange={(e) => setAssignedTo(e.target.value)}
+              placeholder="Assign to (team or person)"
+              style={styles.input}
+            />
+            <select
+              style={styles.input}
+              defaultValue=""
+              onChange={(e) => {
+                if (!e.target.value || !targetReport) return;
+                void updateReportStatus(targetReport.id, e.target.value as ReportStatus, { assignedTo, note: actionNote });
+                setInteractionMessage(`Status set to ${e.target.value} for ${targetReport.id} via ${activeTool}.`);
+                e.target.value = '';
+              }}
+            >
+              <option value="" disabled>Set status instantly…</option>
+              <option value="Investigating">→ Investigating</option>
+              <option value="Action Taken">→ Action Taken</option>
+              <option value="Resolved">→ Resolved</option>
+            </select>
+          </div>
+          <textarea
+            value={actionNote}
+            onChange={(e) => setActionNote(e.target.value)}
+            placeholder="Action note (auto-filled from tool — edit as needed)…"
+            rows={3}
+            style={{ ...styles.input, width: '100%', marginTop: 8, resize: 'vertical', fontFamily: 'inherit' }}
+          />
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+            <button
+              style={{ ...styles.smallBtnPrimary, flex: 1, minWidth: 140 }}
+              onClick={() => {
+                if (!targetReport) { setInteractionMessage('Select a report first.'); return; }
+                if (!actionNote.trim()) { setInteractionMessage('Add an action note before submitting.'); return; }
+                void updateReportStatus(targetReport.id, 'Action Taken', { assignedTo, note: actionNote });
+                setInteractionMessage(`Action submitted for ${targetReport.id} via ${activeTool}.`);
+              }}
+            >
+              Submit Action to Case
+            </button>
+            <button
+              style={styles.smallBtn}
+              onClick={() => {
+                if (!targetReport || !actionNote.trim()) return;
+                void updateReportStatus(targetReport.id, 'Resolved', { assignedTo, note: `${activeTool} complete. ${actionNote}` });
+                setInteractionMessage(`Case ${targetReport.id} resolved via ${activeTool}.`);
+                setActiveTool('');
+              }}
+            >
+              Resolve &amp; Close
+            </button>
+            <button style={styles.smallBtn} onClick={() => { setActionNote(''); setAssignedTo(''); }}>Clear Fields</button>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontSize: 11, color: '#64748b' }}>Other tools in this category:</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {categoryTools(activeCategoryType).slice(0, 6).filter(t => t !== activeTool).map(t => (
+              <button key={t} style={{ ...styles.referBtn, fontSize: 10 }} onClick={() => openTool(t)}>{t}</button>
+            ))}
+          </div>
+        </div>
+      </section>
     );
   };
 
@@ -2289,6 +2582,8 @@ export default function EnhancedNexusPrototype() {
         </section>
 
         {renderEntityLayout()}
+
+        {activeTool && renderToolPanel()}
 
         <section style={styles.navCard}>
           {ACTION_AREAS.map((a) => (
