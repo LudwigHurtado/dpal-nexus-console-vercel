@@ -1136,6 +1136,30 @@ export default function EnhancedNexusPrototype() {
     });
   };
 
+  const categoryTools = (type: EntityType) => {
+    const common = ['Reports Queue', 'Action Center', 'Analytics', 'Audit Trail', 'AI Copilot', 'Voice Controls'];
+    const byType: Partial<Record<EntityType, string[]>> = {
+      City: ['Citizen Intake Routing', 'Public Works Dispatch', 'Traffic Risk Radar'],
+      'Hospital Network': ['Clinical Risk Triage', 'Compliance Packet Builder', 'Patient Safety Escalation'],
+      'School District': ['Campus Escalation Protocol', 'Counselor Routing', 'Parent Communication Composer'],
+      'County Government': ['Inter-Agency Handoff', 'Storm Readiness Board', 'Constituent Escalation Tracker'],
+      University: ['Academic Integrity Workflow', 'Governance Review Queue', 'Campus Security Feed'],
+      'Transit Agency': ['Route Disruption Console', 'Station Safety Queue', 'Recovery SLA Tracker'],
+      'Police Department': ['Priority Dispatch Triage', 'Evidence Chain Tracker', 'Precinct Risk Board'],
+      'Fire Department': ['Emergency Dispatch Board', 'Hydrant Readiness Checks', 'Post-Incident Workflow'],
+      'Housing Authority': ['Tenant Protection Workflow', 'Inspection Assignment', 'Legal Escalation Matrix'],
+      'Utilities Provider': ['Outage Response SOP', 'Field Crew Dispatch', 'Regulator Notification Template'],
+      'Retail Chain': ['Store Risk Feed', 'Loss Prevention Queue', 'Regional Incident Dispatch'],
+      'Logistics Company': ['Hub Disruption Board', 'Driver Safety Queue', 'Claims Triage'],
+      'Banking Group': ['Fraud Escalation Queue', 'Consumer Harm Scoring', 'Restitution Workflow'],
+      'Insurance Provider': ['Claim Integrity Scoring', 'Fraud Signal Review', 'Legal Exposure Tracker'],
+      'Telecom Provider': ['Network Outage Triage', 'Tower Dispatch Board', 'SLA Risk Watch'],
+      'Airport Authority': ['Terminal Incident Queue', 'Ground Ops Safety', 'Aviation Compliance Workflow'],
+    };
+
+    return [...(byType[type] || []), ...common];
+  };
+
   const categoryLinks = (type: EntityType) => {
     const base: Array<{ label: string; action: string }> = [
       { label: 'Open Policy Playbook', action: 'Policy guidance loaded for this category.' },
@@ -1708,6 +1732,15 @@ export default function EnhancedNexusPrototype() {
                 {action.label}
               </button>
             ))}
+          </div>
+
+          <div style={{ ...styles.recommendCard, marginTop: 10 }}>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>Category Toolset ({activeCategoryType})</div>
+            <div style={styles.referRow}>
+              {categoryTools(activeCategoryType).map((toolName) => (
+                <span key={`${activeCategoryType}-tool-${toolName}`} style={styles.channelChip}>{toolName}</span>
+              ))}
+            </div>
           </div>
 
           <div style={styles.agentConsole}>
