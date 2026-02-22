@@ -2557,25 +2557,193 @@ export default function EnhancedNexusPrototype() {
           </div>
         </section>
 
-        <section style={styles.heroImageCard}>
-          <img
-            src={activeCategoryImage}
-            alt={selectedEntity.name}
-            style={styles.heroImage}
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = categoryFallbackImage(activeCategoryType);
-            }}
-          />
-          <div style={styles.heroOverlay}>
-            <div style={{ ...styles.panelLabel, color: profile.color }}>{profile.headline}</div>
-            <h2 style={{ margin: '4px 0 0 0' }}>{selectedEntity.name}</h2>
-            <p style={{ margin: '6px 0 0 0', color: '#cbd5e1' }}>{selectedEntity.region} • {selectedEntity.status} • Confidence {selectedEntity.confidence}%</p>
-            <div style={styles.channelWrap}>
-              {profile.channelFocus.map((c) => <span key={c} style={{ ...styles.channelChip, borderColor: profile.color }}>{c}</span>)}
-            </div>
-          </div>
-        </section>
+        {/* ── Tab-specific content panel ── */}
+        {(() => {
+          const tabArea = getAreaForPortalTab(activePortalTab);
+          const isComplaints = /complaint|violation/i.test(activePortalTab);
+          const isFeedback = /feedback/i.test(activePortalTab);
+          const displayReports = isComplaints
+            ? currentReports.filter(r => r.severity === 'High' || r.severity === 'Moderate')
+            : isFeedback
+            ? currentReports.filter(r => r.channel === 'App' || r.channel === 'WhatsApp' || r.severity === 'Low')
+            : currentReports;
+
+          if (tabArea === 'reports') {
+            return (
+              <section style={{ display: 'grid', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
+                  {([
+                    { label: 'Total', value: displayReports.length, color: '#93c5fd' },
+                    { label: 'High Risk', value: displayReports.filter(r => r.severity === 'High').length, color: '#ef4444' },
+                    { label: 'Open', value: displayReports.filter(r => r.status === 'New' || r.status === 'Investigating').length, color: '#f97316' },
+                    { label: 'Resolved', value: displayReports.filter(r => r.status === 'Resolved').length, color: '#22c55e' },
+                  ] as {label:string;value:number;color:string}[]).map(s => (
+                    <div key={s.label} style={{ background: 'rgba(15,23,42,0.95)', border: `1px solid ${s.color}33`, borderRadius: 10, padding: '14px 16px' }}>
+                      <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' as const }}>{s.label}</div>
+                      <div style={{ fontSize: 32, fontWeight: 900, color: s.color, marginTop: 4, lineHeight: 1 }}>{s.value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid #1e293b', borderRadius: 12, padding: '14px 16px' }}>
+                  <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' as const, marginBottom: 10 }}>
+                    {isComplaints ? 'Complaints & Violations' : isFeedback ? 'Community Feedback' : 'Reports Queue'} — {selectedEntity.name}
+                  </div>
+                  <div style={{ display: 'grid', gap: 5, maxHeight: 280, overflowY: 'auto' as const, paddingRight: 4 }}>
+                    {displayReports.slice(0, 12).map(r => (
+                      <button key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: selectedReportId === r.id ? 'rgba(59,130,246,0.1)' : 'rgba(11,18,32,0.8)', border: `1px solid ${selectedReportId === r.id ? '#3b82f6' : '#1e293b'}`, borderRadius: 8, textAlign: 'left' as const, cursor: 'pointer', width: '100%' }}
+                        onClick={() => { setSelectedReportId(r.id); openArea('reports'); setInteractionMessage(`Viewing report ${r.id}: ${r.title}`); }}>
+                        <span style={{ width: 9, height: 9, borderRadius: '50%', background: r.severity === 'High' ? '#ef4444' : r.severity === 'Moderate' ? '#f97316' : '#22c55e', flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{r.title}</div>
+                          <div style={{ fontSize: 10, color: '#475569', marginTop: 1 }}>{r.id} · {r.location} · {r.channel}</div>
+                        </div>
+                        <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 999, background: r.severity === 'High' ? '#ef444422' : r.severity === 'Moderate' ? '#f9731622' : '#22c55e22', color: r.severity === 'High' ? '#ef4444' : r.severity === 'Moderate' ? '#f97316' : '#22c55e', fontWeight: 700, flexShrink: 0 }}>{r.severity}</span>
+                        <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 4, background: '#1e293b', color: '#94a3b8', fontWeight: 600, flexShrink: 0 }}>{r.status}</span>
+                      </button>
+                    ))}
+                    {displayReports.length === 0 && <p style={{ color: '#475569', fontSize: 12, textAlign: 'center', padding: '20px 0' }}>No items in this view.</p>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' as const }}>
+                    <button style={styles.smallBtnPrimary} onClick={() => openArea('reports')}>Open Full Reports Queue →</button>
+                    <button style={styles.smallBtn} onClick={() => openArea('dispatch')}>Action Center</button>
+                    <button style={styles.smallBtn} onClick={() => openArea('audit')}>Audit Trail</button>
+                  </div>
+                </div>
+              </section>
+            );
+          }
+
+          if (tabArea === 'analytics') {
+            const score = Math.round(selectedEntity.confidence * 0.9);
+            const checks = [
+              { label: 'Financial Disclosures Filed', done: selectedEntity.confidence > 70 },
+              { label: 'ESG Report Published', done: selectedEntity.confidence > 80 },
+              { label: 'Audit Committee Verified', done: selectedEntity.confidence > 75 },
+              { label: 'Policy Manual Updated (< 12 months)', done: selectedEntity.confidence > 85 },
+              { label: 'Community Consultation Logged', done: selectedEntity.confidence > 65 },
+              { label: 'Vendor Risk Assessments Completed', done: selectedEntity.confidence > 90 },
+            ];
+            return (
+              <section style={{ display: 'grid', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 12 }}>
+                  <div style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid #334155', borderRadius: 12, padding: '20px 16px', textAlign: 'center' as const }}>
+                    <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' as const, marginBottom: 8 }}>Compliance Score</div>
+                    <div style={{ fontSize: 52, fontWeight: 900, color: score >= 80 ? '#22c55e' : score >= 60 ? '#f97316' : '#ef4444', lineHeight: 1 }}>{score}</div>
+                    <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>out of 100</div>
+                    <div style={{ marginTop: 12, height: 6, background: '#1e293b', borderRadius: 999 }}>
+                      <div style={{ height: '100%', width: `${score}%`, background: score >= 80 ? '#22c55e' : score >= 60 ? '#f97316' : '#ef4444', borderRadius: 999, transition: 'width 0.4s' }} />
+                    </div>
+                    <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      <button style={styles.smallBtnPrimary} onClick={() => void generateExecutiveBrief()}>Generate Brief</button>
+                      <button style={styles.smallBtn} onClick={() => openArea('analytics')}>Full Analytics →</button>
+                    </div>
+                  </div>
+                  <div style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid #334155', borderRadius: 12, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' as const, marginBottom: 10 }}>Policy Compliance Checklist</div>
+                    <div style={{ display: 'grid', gap: 7 }}>
+                      {checks.map(c => (
+                        <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${c.done ? '#22c55e' : '#334155'}`, background: c.done ? '#22c55e' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', flexShrink: 0, fontWeight: 900 }}>{c.done ? '✓' : ''}</span>
+                          <span style={{ fontSize: 12, color: c.done ? '#e2e8f0' : '#475569', flex: 1 }}>{c.label}</span>
+                          {!c.done && <span style={{ fontSize: 9, color: '#ef4444', fontWeight: 700, flexShrink: 0 }}>ACTION NEEDED</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 8 }}>
+                  {selectedEntity.valueStats.map(s => (
+                    <div key={s.label} style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid #1e293b', borderRadius: 8, padding: '10px 12px' }}>
+                      <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700 }}>{s.label}</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: '#93c5fd', marginTop: 3 }}>{s.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          }
+
+          if (tabArea === 'dispatch') {
+            const openCases = currentReports.filter(r => r.status !== 'Resolved');
+            return (
+              <section style={{ display: 'grid', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+                  {([
+                    { label: 'Active Cases', value: openCases.length, color: '#f97316', area: 'reports' as ActionArea },
+                    { label: 'Assigned', value: openCases.filter(r => r.assignedTo).length, color: '#3b82f6', area: 'dispatch' as ActionArea },
+                    { label: 'Unassigned', value: openCases.filter(r => !r.assignedTo).length, color: '#ef4444', area: 'reports' as ActionArea },
+                  ] as {label:string;value:number;color:string;area:ActionArea}[]).map(s => (
+                    <button key={s.label} style={{ background: 'rgba(15,23,42,0.95)', border: `1px solid ${s.color}33`, borderRadius: 10, padding: '14px 16px', cursor: 'pointer', textAlign: 'left' as const }} onClick={() => openArea(s.area)}>
+                      <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' as const }}>{s.label}</div>
+                      <div style={{ fontSize: 36, fontWeight: 900, color: s.color, lineHeight: 1, marginTop: 4 }}>{s.value}</div>
+                      <div style={{ fontSize: 10, color: '#334155', marginTop: 6 }}>Tap to manage →</div>
+                    </button>
+                  ))}
+                </div>
+                <div style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid #1e293b', borderRadius: 12, padding: '14px 16px' }}>
+                  <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' as const, marginBottom: 10 }}>Open Case Assignments — {selectedEntity.name}</div>
+                  <div style={{ display: 'grid', gap: 5, maxHeight: 260, overflowY: 'auto' as const }}>
+                    {openCases.slice(0, 10).map(r => (
+                      <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: 'rgba(11,18,32,0.8)', border: '1px solid #1e293b', borderRadius: 8 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.severity === 'High' ? '#ef4444' : r.severity === 'Moderate' ? '#f97316' : '#22c55e', flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{r.title}</div>
+                          <div style={{ fontSize: 10, color: '#475569' }}>{r.id} · {r.location}</div>
+                        </div>
+                        <span style={{ fontSize: 11, color: r.assignedTo ? '#22c55e' : '#f97316', flexShrink: 0, fontWeight: 600 }}>{r.assignedTo ? `→ ${r.assignedTo}` : '⚠ Unassigned'}</span>
+                        <button style={{ ...styles.referBtn, fontSize: 10 }} onClick={() => { setSelectedReportId(r.id); openArea('dispatch'); setInteractionMessage(`Managing case: ${r.id}`); }}>Manage →</button>
+                      </div>
+                    ))}
+                    {openCases.length === 0 && <p style={{ color: '#22c55e', fontSize: 12, textAlign: 'center', padding: '20px 0' }}>✓ All cases resolved</p>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                    <button style={styles.smallBtnPrimary} onClick={() => openArea('dispatch')}>Open Action Center →</button>
+                    <button style={styles.smallBtn} onClick={() => void agentRouteAllOpenCases()}>Auto-Route All</button>
+                  </div>
+                </div>
+              </section>
+            );
+          }
+
+          // tabArea === 'audit' — Admin panel
+          return (
+            <section style={{ display: 'grid', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid #334155', borderRadius: 12, padding: '14px 16px' }}>
+                  <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' as const, marginBottom: 10 }}>Entity Management</div>
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    <input value={entityEditorName} onChange={e => setEntityEditorName(e.target.value)} placeholder="Entity name" style={styles.input} />
+                    <input value={entityEditorRegion} onChange={e => setEntityEditorRegion(e.target.value)} placeholder="Region code" style={styles.input} />
+                    <select value={entityEditorStatus} onChange={e => setEntityEditorStatus(e.target.value as Status)} style={styles.input}>
+                      <option value="Active">Active</option><option value="Pilot">Pilot</option><option value="Planning">Planning</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' as const }}>
+                    <button style={styles.smallBtnPrimary} onClick={updateCurrentEntity}>Save Changes</button>
+                    <button style={styles.smallBtn} onClick={createEntityFromEditor}>+ Create New Entity</button>
+                  </div>
+                </div>
+                <div style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid #334155', borderRadius: 12, padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' as const }}>Audit Trail</div>
+                    <button style={{ ...styles.smallBtn, fontSize: 10 }} onClick={() => openArea('audit')}>Full View →</button>
+                  </div>
+                  <div style={{ maxHeight: 175, overflowY: 'auto' as const, display: 'grid', gap: 2 }}>
+                    {auditEntries.length > 0 ? auditEntries.slice(-10).reverse().map((entry, i) => (
+                      <div key={i} style={{ fontSize: 10, color: '#94a3b8', padding: '4px 0', borderBottom: '1px solid #0f172a' }}>{entry}</div>
+                    )) : <div style={{ fontSize: 11, color: '#475569' }}>No audit entries yet. Actions are logged here automatically.</div>}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+                <button style={styles.smallBtn} onClick={() => openArea('audit')}>Audit Work Queue</button>
+                <button style={styles.smallBtn} onClick={() => openArea('analytics')}>Analytics & Reports</button>
+                <button style={styles.smallBtn} onClick={() => void generateExecutiveBrief()}>Generate Executive Brief</button>
+                <button style={styles.smallBtnPrimary} onClick={() => { openArea('audit'); setInteractionMessage('Admin panel opened — full audit and user management.'); }}>Open Full Admin Panel →</button>
+              </div>
+            </section>
+          );
+        })()}
 
         <section style={styles.kpiGrid}>
           {selectedEntity.kpis.map((kpi) => (
