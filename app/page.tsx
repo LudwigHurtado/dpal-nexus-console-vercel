@@ -1735,9 +1735,11 @@ export default function EnhancedNexusPrototype() {
           <div style={styles.showcaseGrid}>
             {categoryCards.map((category) => {
               const hasEntity = entities.some((entity) => entity.type === category.type);
+              const icon = CATEGORY_ICONS[category.type] || '🧩';
               return (
                 <button
                   key={category.type}
+                  className="showcase-card"
                   style={{ ...styles.showcaseCard, opacity: hasEntity ? 1 : 0.7 }}
                   onClick={() => {
                     setSelectedType(category.type);
@@ -1750,18 +1752,12 @@ export default function EnhancedNexusPrototype() {
                   }}
                   title={hasEntity ? `Open ${category.type}` : `${category.type} demo coming next`}
                 >
-                  <img
-                    src={category.image}
-                    alt={category.type}
-                    style={styles.showcaseImage}
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = categoryFallbackImage(category.type);
-                    }}
-                  />
+                  <div style={styles.showcaseIconWrap}>
+                    <span style={styles.showcaseIcon} aria-hidden>{icon}</span>
+                  </div>
                   <div style={styles.showcaseBody}>
                     <div style={styles.showcaseTag}>{category.type}</div>
-                    <div style={{ color: '#cbd5e1', fontSize: 13 }}>{category.caption}</div>
+                    <div style={styles.showcaseCaption}>{category.caption}</div>
                   </div>
                 </button>
               );
@@ -2317,13 +2313,29 @@ const styles: Record<string, React.CSSProperties> = {
   arrowBtn: { border: '1px solid #334155', background: '#111827', color: '#e2e8f0', borderRadius: 10, padding: '10px 12px', cursor: 'pointer', fontWeight: 800 },
   select: { minWidth: 320, background: '#0f172a', color: '#e2e8f0', border: '1px solid #334155', borderRadius: 10, padding: '10px 12px' },
   entityEditorCard: { border: '1px dashed #334155', borderRadius: 12, padding: 10, background: 'rgba(15,23,42,0.55)' },
-  showcasePanel: { border: '1px solid #334155', borderRadius: 12, padding: 10, background: 'rgba(11,18,32,0.86)' },
-  showcaseHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 10 },
-  showcaseGrid: { display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))' },
-  showcaseCard: { border: '1px solid #334155', borderRadius: 14, overflow: 'hidden', background: '#0b1220', cursor: 'pointer', padding: 0, textAlign: 'left' },
-  showcaseImage: { width: '100%', height: 84, objectFit: 'cover', display: 'block' },
-  showcaseBody: { padding: 10, display: 'grid', gap: 6 },
-  showcaseTag: { color: '#93c5fd', fontSize: 12, fontWeight: 800, textTransform: 'uppercase' },
+  showcasePanel: { border: '1px solid #334155', borderRadius: 12, padding: 16, background: 'rgba(11,18,32,0.86)' },
+  showcaseHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 10 },
+  showcaseGrid: { display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' },
+  showcaseCard: {
+    border: '1px solid rgba(148, 163, 184, 0.2)',
+    borderRadius: 16,
+    overflow: 'hidden',
+    background: 'rgba(15, 23, 42, 0.78)',
+    cursor: 'pointer',
+    padding: 0,
+    textAlign: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    boxShadow: '0 0 0 1px rgba(148, 163, 184, 0.1) inset, 0 1px 0 0 rgba(148, 163, 184, 0.06), 0 4px 24px rgba(0, 0, 0, 0.35)',
+    minHeight: 160,
+    transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
+  },
+  showcaseIconWrap: { padding: '20px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  showcaseIcon: { fontSize: 48, lineHeight: 1, display: 'block' },
+  showcaseBody: { padding: '8px 16px 20px', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center' },
+  showcaseTag: { color: '#f1f5f9', fontSize: 14, fontWeight: 700, lineHeight: 1.3 },
+  showcaseCaption: { color: '#cbd5e1', fontSize: 13, lineHeight: 1.35 },
   heroImageCard: { position: 'relative', borderRadius: 16, overflow: 'hidden', border: '1px solid #334155', minHeight: 220 },
   heroImage: { width: '100%', height: 260, objectFit: 'cover', display: 'block' },
   heroOverlay: { position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(2,6,23,0.2), rgba(2,6,23,0.75))', padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 8 },
