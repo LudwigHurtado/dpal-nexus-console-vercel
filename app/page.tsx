@@ -770,7 +770,7 @@ export default function EnhancedNexusPrototype() {
   const [assignedTo, setAssignedTo] = useState('');
   const [actionNote, setActionNote] = useState('');
   const [auditEntries, setAuditEntries] = useState<string[]>([]);
-  const [showAllCategories, setShowAllCategories] = useState(false);
+  const [categoryViewMode, setCategoryViewMode] = useState<'featured' | 'all' | 'single'>('featured');
   const [aiByReportId, setAiByReportId] = useState<Record<string, AiInsight>>({});
   const [aiLoadingFor, setAiLoadingFor] = useState<string>('');
   const [executiveBrief, setExecutiveBrief] = useState('');
@@ -806,6 +806,7 @@ export default function EnhancedNexusPrototype() {
   const [entityEditorRegion, setEntityEditorRegion] = useState('');
   const [entityEditorStatus, setEntityEditorStatus] = useState<Status>('Active');
   const [activePortalTab, setActivePortalTab] = useState<string>('Dashboard');
+  const [previousPortalTab, setPreviousPortalTab] = useState<string>('Dashboard');
   const [activeTool, setActiveTool] = useState<string>('');
   const [entitySearch, setEntitySearch] = useState('');
   const [entitySearchOpen, setEntitySearchOpen] = useState(false);
@@ -817,15 +818,20 @@ export default function EnhancedNexusPrototype() {
   const typeOptions = useMemo(() => ['All', ...Array.from(new Set(entities.map((e) => e.type)))] as const, [entities]);
   const featuredCategoryTypes = useMemo(() => ['City', 'School District', 'Hospital Network', 'Banking Group', 'Utilities Provider', 'Housing Authority'], [] as string[]);
   const categoryCards = useMemo(() => {
-    const base = showAllCategories
-      ? CATEGORY_SHOWCASE
-      : (() => {
-          const featured = CATEGORY_SHOWCASE.filter((c) => featuredCategoryTypes.includes(c.type));
-          return featured.length ? featured : CATEGORY_SHOWCASE.slice(0, 6);
-        })();
+    const fallbackType = entities.find((e) => e.id === selectedEntityId)?.type || entities[0]?.type || 'City';
+    const singleType = (selectedType === 'All' ? fallbackType : selectedType) as EntityType;
+    const base =
+      categoryViewMode === 'all'
+        ? CATEGORY_SHOWCASE
+        : categoryViewMode === 'single'
+        ? CATEGORY_SHOWCASE.filter((c) => c.type === singleType)
+        : (() => {
+            const featured = CATEGORY_SHOWCASE.filter((c) => featuredCategoryTypes.includes(c.type));
+            return featured.length ? featured : CATEGORY_SHOWCASE.slice(0, 6);
+          })();
 
     return base.map((c) => ({ ...c, image: categoryImageForType(c.type) }));
-  }, [showAllCategories, featuredCategoryTypes]);
+  }, [categoryViewMode, featuredCategoryTypes, selectedType, selectedEntityId, entities]);
   const filteredEntities = useMemo(() => (selectedType === 'All' ? entities : entities.filter((e) => e.type === selectedType)), [selectedType, entities]);
   const selectedEntity = filteredEntities.find((entity) => entity.id === selectedEntityId) || filteredEntities[0] || entities[0];
   const portalTabs = PORTAL_TABS_BY_TYPE[selectedEntity.type] || PORTAL_TABS_BY_TYPE.City;
@@ -1247,7 +1253,9 @@ export default function EnhancedNexusPrototype() {
   const openArea = (area: ActionArea) => {
     setActiveArea(area);
     const tabs = PORTAL_TABS_BY_TYPE[selectedEntity.type] || PORTAL_TABS_BY_TYPE.City;
-    setActivePortalTab(getTabForArea(area, tabs));
+    const nextTab = getTabForArea(area, tabs);
+    if (nextTab !== activePortalTab) setPreviousPortalTab(activePortalTab);
+    setActivePortalTab(nextTab);
     const areaLabel = ACTION_AREAS.find((a) => a.key === area)?.label || area;
     setInteractionMessage(`${areaLabel} — ${selectedEntity.name}. View updated.`);
     logAction(`Switched section to ${area}`);
@@ -2318,6 +2326,25 @@ export default function EnhancedNexusPrototype() {
     );
   };
 
+  const goHome = () => {
+    setPreviousPortalTab(activePortalTab);
+    setActivePortalTab('Dashboard');
+    openArea('analytics');
+    setInteractionMessage(`Home opened for ${selectedEntity.name}.`);
+  };
+
+  const goBack = () => {
+    if (!previousPortalTab || previousPortalTab === activePortalTab) {
+      setInteractionMessage('No previous view yet.');
+      return;
+    }
+    const target = previousPortalTab;
+    setPreviousPortalTab(activePortalTab);
+    setActivePortalTab(target);
+    openArea(getAreaForPortalTab(target));
+    setInteractionMessage(`Returned to ${target}.`);
+  };
+
   return (
     <main style={styles.page}>
       <div style={styles.shell}>
@@ -2349,6 +2376,8 @@ export default function EnhancedNexusPrototype() {
               </div>
             </div>
             <div style={styles.portalRightRow}>
+              <button style={styles.portalNavBtn} onClick={goBack}>← Return</button>
+              <button style={styles.portalNavBtn} onClick={goHome}>⌂ Home</button>
               <div style={{
                 ...styles.portalRiskPill,
                 backgroundColor: selectedEntity.confidence >= 90 ? 'rgba(34,197,94,0.2)' : selectedEntity.confidence >= 80 ? 'rgba(249,115,22,0.25)' : 'rgba(239,68,68,0.2)',
@@ -2378,6 +2407,7 @@ export default function EnhancedNexusPrototype() {
                     ...(isActive ? styles.portalTabActive : {}),
                   }}
                   onClick={() => {
+                    if (tab !== activePortalTab) setPreviousPortalTab(activePortalTab);
                     setActivePortalTab(tab);
                     openArea(getAreaForPortalTab(tab));
                     setInteractionMessage(`${tab} — ${selectedEntity.name} (${selectedEntity.type}). Content updated.`);
@@ -2492,9 +2522,17 @@ export default function EnhancedNexusPrototype() {
         <section style={styles.showcasePanel}>
           <div style={styles.showcaseHeader}>
             <div style={styles.panelLabel}>Categories</div>
-            <button style={styles.smallBtn} onClick={() => setShowAllCategories((v) => !v)}>
-              {showAllCategories ? 'Show fewer' : 'Show all categories'}
-            </button>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button style={{ ...styles.smallBtn, ...(categoryViewMode === 'single' ? styles.sectionBtnActive : {}) }} onClick={() => setCategoryViewMode('single')}>
+                Show one category
+              </button>
+              <button style={{ ...styles.smallBtn, ...(categoryViewMode === 'featured' ? styles.sectionBtnActive : {}) }} onClick={() => setCategoryViewMode('featured')}>
+                Featured
+              </button>
+              <button style={{ ...styles.smallBtn, ...(categoryViewMode === 'all' ? styles.sectionBtnActive : {}) }} onClick={() => setCategoryViewMode('all')}>
+                All categories
+              </button>
+            </div>
           </div>
 
           <div style={styles.showcaseGrid}>
@@ -3547,6 +3585,7 @@ const styles: Record<string, React.CSSProperties> = {
   portalSubtitle: { color: '#64748b', fontSize: 12, marginTop: 1 },
   portalEntityMeta: { color: '#475569', fontSize: 10, marginTop: 2 },
   portalRightRow: { display: 'flex', alignItems: 'center', gap: 12 },
+  portalNavBtn: { border: '1px solid #334155', background: 'rgba(255,255,255,0.03)', color: '#cbd5e1', borderRadius: 8, padding: '7px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' },
   portalRiskPill: { display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 999, border: '1px solid', color: '#e2e8f0', fontSize: 12, fontWeight: 700 },
   portalUserRow: { display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999, background: 'rgba(255,255,255,0.04)', cursor: 'pointer' },
   portalAvatar: { width: 30, height: 30, borderRadius: 999, background: 'linear-gradient(135deg,#334155,#1e293b)', color: '#94a3b8', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #334155' },
